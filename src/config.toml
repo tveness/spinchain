@@ -1,0 +1,14 @@
+hsize  = 512     #total chain length
+ssize  = 1       #system size
+t      = 256     #time per run
+dt     = 0.02    #time increment
+runs   = 2       #number of runs
+trel   = 0       #relaxation time (simulation run without time dependent field and without writing output)
+tau    = 10000      #period of driving
+lambda = 1       #coupling anisotropy
+hfield = [0,0,0.1] #global magnetic field (applied to entire chain)
+jvar   = 0.001   #variance of stochastic offset on coupling constants
+hvar   = 0       #variance of stochastic offset on global magnetic field
+method = 2       #integration method (2 = 2nd order suzuki-trotter, 3 = 3rd order)
+ednsty = -0.66   #initial mean energy density (must be between -1 and 1)
+file = "log.dat" #where to log
