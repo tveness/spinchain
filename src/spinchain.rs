@@ -41,7 +41,7 @@ impl SpinChain {
             Ok(s) => toml::from_str(&s).unwrap(),
             Err(e) => {
                 eprintln!(
-                    "Could not open file {}, written default config to config.toml and using this",
+                    "Problem reading {}, written default configuration to config.toml and using this",
                     filename
                 );
                 fs::write("config.toml", toml::to_string(&Config::default()).unwrap()).unwrap();
