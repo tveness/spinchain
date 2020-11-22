@@ -7,6 +7,7 @@ pub struct Spin {
 }
 
 impl Spin {
+    #[allow(dead_code)]
     pub fn new() -> Spin {
         Spin {
             x: 1.0,
@@ -14,6 +15,8 @@ impl Spin {
             z: 0.0,
         }
     }
+
+    #[allow(dead_code)]
     pub fn new_xyz(input: &[f32]) -> Spin {
         Spin {
             x: input[0],
@@ -30,6 +33,7 @@ impl Spin {
         }
     }
 
+    #[allow(dead_code)]
     /// Sets the angles of the spin
     pub fn set_angles(&mut self, theta: f32, phi: f32) {
         self.x = theta.cos() * phi.sin();

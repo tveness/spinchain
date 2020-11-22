@@ -5,7 +5,6 @@ use super::*;
 use rand_distr::{Distribution, Normal};
 use std::fs;
 use std::fs::File;
-use std::io::prelude::*;
 use std::io::Write;
 
 ///Cartesian direction
@@ -34,19 +33,34 @@ pub struct SpinChain {
 }
 
 impl SpinChain {
+    /// Reads a configuration from a file.
+    /// If the file cannot be opened, write a config.toml with default values and use default
+    /// values
+    pub fn read_config(filename: &str) -> Config {
+        match fs::read_to_string(filename) {
+            Ok(s) => toml::from_str(&s).unwrap(),
+            Err(e) => {
+                eprintln!(
+                    "Could not open file {}, written default config to config.toml and using this",
+                    filename
+                );
+                fs::write("config.toml", toml::to_string(&Config::default()).unwrap()).unwrap();
+                Config::default()
+            }
+        }
+    }
+
     /// Creates a new spin chain by reading the configuration variables from a toml file
     ///
     /// The spins
     /// are then initialised in a random configuration at the correct energy density for the case
     /// of isotropic coupling and zero magnetic field
     pub fn new(filename: Option<&str>) -> SpinChain {
-        let mut r = rand::thread_rng();
         //Read configuration file
         //Can make this refer to a default if error and then write a config file
+        let mut r = rand::thread_rng();
         let conf: Config = match filename {
-            Some(x) => {
-                toml::from_str(&fs::read_to_string(x).expect("Could not read config file")).unwrap()
-            }
+            Some(x) => Self::read_config(x),
             None => Config::default(),
         };
 
@@ -402,8 +416,9 @@ mod tests {
         sc.static_h = vec![vec![0.0, 0.0, 1.0]; sc.static_h.len()];
         //Update with just static field, and check that each spin evolves correctly
         for i in 0..100 {
+            let abs_diff: f32 = (sc.spins[7].x - (sc.vars.dt * i as f32).cos()).abs();
             sc.update(false);
-            let abs_diff: f32 = (sc.spins[7].x - (sc.vars.dt * i as f32).cos());
+            println!("abs diff: {}", abs_diff);
             assert!(abs_diff < 0.001);
         }
     }

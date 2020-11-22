@@ -15,11 +15,11 @@ fn main() {
     println!("Running with configuration:");
     println!("{}", toml::to_string(&spin_chain.vars).unwrap());
 
-    //println!("{:?}", spin_chain);
 
     println!("Mx: {}", spin_chain.m(Dir::X));
     println!("My: {}", spin_chain.m(Dir::Y));
     println!("Mz: {}", spin_chain.m(Dir::Z));
+
     let pb = ProgressBar::new(spin_chain.vars.t as u64);
     pb.set_style(
         ProgressStyle::default_bar()
@@ -29,7 +29,6 @@ fn main() {
             .progress_chars("#>-"),
     );
 
-    //spin_chain.start_log("data.dat");
     while spin_chain.t < spin_chain.vars.t {
         spin_chain.update(true);
         spin_chain.log();
@@ -38,6 +37,5 @@ fn main() {
     }
     pb.finish_with_message("Done");
     println!("Energy density: {}", spin_chain.total_energy());
-    //spin_chain.end_log();
-    //    println!("Spins: {:?}", spin_chain.spins);
+
 }
