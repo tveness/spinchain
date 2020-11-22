@@ -1,3 +1,4 @@
+use indicatif::{ProgressBar, ProgressStyle};
 mod config;
 use self::config::Config;
 
@@ -19,13 +20,23 @@ fn main() {
     println!("Mx: {}", spin_chain.m(Dir::X));
     println!("My: {}", spin_chain.m(Dir::Y));
     println!("Mz: {}", spin_chain.m(Dir::Z));
+    let pb = ProgressBar::new(spin_chain.vars.t as u64);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] t={pos}/{len} ({eta})",
+            )
+            .progress_chars("#>-"),
+    );
 
     //spin_chain.start_log("data.dat");
     while spin_chain.t < spin_chain.vars.t {
-        spin_chain.update();
+        spin_chain.update(true);
         spin_chain.log();
+        pb.set_position(spin_chain.t as u64);
         //spin_chain.log();
     }
+    pb.finish_with_message("Done");
     println!("Energy density: {}", spin_chain.total_energy());
     //spin_chain.end_log();
     //    println!("Spins: {:?}", spin_chain.spins);

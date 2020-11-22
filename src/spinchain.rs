@@ -144,7 +144,7 @@ impl SpinChain {
         let js = &self.j_couple[..s];
         let spins1 = &self.spins[1..s];
 
-        //Get energy of s J s terms
+        //Get energy of s_n J_n s_{n+1} terms
         let mut sjs: f32 = 0.0;
         for i in 0..s - 1 {
             sjs += SpinChain::sjs_energy(&spins[i], &spins1[i], &js[i]);
@@ -170,12 +170,8 @@ impl SpinChain {
         for i in 0..s {
             sh += SpinChain::sh_energy(&spins[i], &h[i]);
         }
-//        println!("sjs: {}", sjs);
- //       println!("sh: {}", sh);
-  //      println!("sjs+sh: {}", sjs+sh);
         if sjs.is_nan() {
-            panic!("SJS is NAN, spins are: {:?}",self.spins);
-            panic!("SJS is NAN");
+            panic!("SJS is NAN, spins are: {:?}", self.spins);
         }
         -(sjs + sh) / s as f32
     }
@@ -238,21 +234,20 @@ impl SpinChain {
         result
     }
 
-    fn j_s(j: &[f32], s: &Spin) -> Vec<f32> {
-        j.iter().zip(s.xyz().iter()).map(|(x, y)| x * y).collect()
+    fn j_s(j: &[f32], s: &[f32]) -> Vec<f32> {
+        j.iter().zip(s.iter()).map(|(x, y)| x * y).collect()
     }
 
     ///Update one time-step using Suzuki-Trotter evolution
-    pub fn update(&mut self) {
-
+    pub fn update(&mut self, drive: bool) {
         self.t += self.vars.dt;
 
         // Suzuki-Trotter proceeds in three steps:
         // \Omega_n = J_{n-1} S_{n-1} + J_n S_{n+1} - B_n
 
-        self.rotate_even(&self.even_omega(), self.vars.dt / 2.0);
-        self.rotate_odd(&self.odd_omega(), self.vars.dt);
-        self.rotate_even(&self.even_omega(), self.vars.dt / 2.0);
+        self.rotate_even(&self.even_omega(drive), self.vars.dt / 2.0);
+        self.rotate_odd(&self.odd_omega(drive), self.vars.dt);
+        self.rotate_even(&self.even_omega(drive), self.vars.dt / 2.0);
     }
 
     fn rotate_even(&mut self, field: &[Vec<f32>], dt: f32) {
@@ -264,7 +259,7 @@ impl SpinChain {
     fn rotate_odd(&mut self, field: &[Vec<f32>], dt: f32) {
         let l: usize = self.vars.hsize as usize / 2;
         for (i, item) in field.iter().enumerate() {
-            self.spins[2*i+1].rotate(&item, dt);
+            self.spins[2 * i + 1].rotate(&item, dt);
         }
     }
 
@@ -275,40 +270,60 @@ impl SpinChain {
             .collect()
     }
 
-    fn even_omega(&self) -> Vec<Vec<f32>> {
+    fn even_omega(&self, drive: bool) -> Vec<Vec<f32>> {
         let mut result: Vec<Vec<f32>> = vec![];
+        let h_ext: Vec<f32> = match drive {
+            true => self.h_ext(),
+            false => vec![0., 0., 0.],
+        };
         let l: usize = self.spins.len() as usize / 2;
         for n in 0..l {
             let left_s: Vec<f32> = match n {
-                _ if n == 0 => self.spins[2 * l - 1].xyz(),
-                x => self.spins[2 * x - 1].xyz(),
+                _ if n == 0 => Self::j_s(&self.j_couple[2 * l - 1], &self.spins[2 * l - 1].xyz()),
+                x => Self::j_s(&self.j_couple[2 * x - 1], &self.spins[2 * x - 1].xyz()),
             };
-            let right_s: Vec<f32> = self.spins[2 * n + 1].xyz();
-            let h: Vec<f32> = self.static_h[2 * n].clone(); //iter().zip( self.h_ext().iter()).map(|(x,y)| x+y).collect();
+            let right_s: Vec<f32> = Self::j_s(&self.j_couple[2 * n], &self.spins[2 * n + 1].xyz());
+            let h: Vec<f32> = match n {
+                n if n < l / 2 => self.static_h[2 * n]
+                    .iter()
+                    .zip(h_ext.iter())
+                    .map(|(x, y)| x + y)
+                    .collect(),
+                _ => self.static_h[2 * n].clone(),
+            };
 
             result.push(SpinChain::ssh_sum(&left_s, &right_s, &h));
         }
 
         result
     }
-    fn odd_omega(&self) -> Vec<Vec<f32>> {
+    fn odd_omega(&self, drive: bool) -> Vec<Vec<f32>> {
         let mut result: Vec<Vec<f32>> = vec![];
+        let h_ext: Vec<f32> = match drive {
+            true => self.h_ext(),
+            false => vec![0., 0., 0.],
+        };
         let l: usize = self.spins.len() as usize / 2;
         for n in 0..l {
-            let left_s: Vec<f32> = self.spins[2 * n].xyz();
+            let left_s: Vec<f32> = Self::j_s(&self.j_couple[2 * n], &self.spins[2 * n].xyz());
             let right_s: Vec<f32> = match n {
-                _ if n == l - 1 => self.spins[0].xyz(),
-                _ => self.spins[2 * n + 2].xyz(),
+                _ if n == l - 1 => Self::j_s(&self.j_couple[2 * l - 1], &self.spins[0].xyz()),
+                _ => Self::j_s(&self.j_couple[2 * n + 1], &self.spins[2 * n + 2].xyz()),
             };
-            let h: Vec<f32> = self.static_h[2 * n + 1].clone(); //iter().zip( self.h_ext().iter()).map(|(x,y)| x+y).collect();
+            let h: Vec<f32> = match n {
+                n if n < l / 2 => self.static_h[2 * n + 1]
+                    .iter()
+                    .zip(h_ext.iter())
+                    .map(|(x, y)| x + y)
+                    .collect(),
+                _ => self.static_h[2 * n + 1].clone(),
+            };
 
             result.push(SpinChain::ssh_sum(&left_s, &right_s, &h));
         }
 
         result
     }
-
-
 
     fn pbc_index_odd(n: usize, l: usize) -> usize {
         match n {
@@ -351,7 +366,7 @@ mod tests {
 
         let pi: f32 = std::f32::consts::PI;
         //Spin along z axis
-        let s1: Spin = Spin::new_xyz(&vec![0.0,0.0,1.0]);
+        let s1: Spin = Spin::new_xyz(&vec![0.0, 0.0, 1.0]);
 
         //Spin along x axis
         let mut s2: Spin = Spin::new();
@@ -377,4 +392,19 @@ mod tests {
         assert!(abs_diff < 0.01);
     }
 
+    #[test]
+    fn interactions_off() {
+        let mut sc: SpinChain = SpinChain::new(None);
+        //Turn off interactions
+        sc.j_couple = vec![vec![0.0, 0.0, 0.0]; sc.j_couple.len()];
+        //Point all spins along the x axis
+        sc.spins = vec![Spin::new_xyz(&[1.0, 0.0, 0.0]); sc.spins.len()];
+        sc.static_h = vec![vec![0.0, 0.0, 1.0]; sc.static_h.len()];
+        //Update with just static field, and check that each spin evolves correctly
+        for i in 0..100 {
+            sc.update(false);
+            let abs_diff: f32 = (sc.spins[7].x - (sc.vars.dt * i as f32).cos());
+            assert!(abs_diff < 0.001);
+        }
+    }
 }

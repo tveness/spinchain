@@ -7,23 +7,34 @@ pub struct Spin {
 }
 
 impl Spin {
-
     pub fn new() -> Spin {
-        Spin { x: 1.0, y: 0.0, z: 0.0 }
+        Spin {
+            x: 1.0,
+            y: 0.0,
+            z: 0.0,
+        }
     }
     pub fn new_xyz(input: &[f32]) -> Spin {
-        Spin { x: input[0], y: input[1], z: input[2] }
+        Spin {
+            x: input[0],
+            y: input[1],
+            z: input[2],
+        }
     }
 
     pub fn new_from_angles(theta: f32, phi: f32) -> Spin {
-        Spin { x: theta.cos() * phi.sin() , y: theta.sin() * phi.sin(), z: phi.cos() }
+        Spin {
+            x: theta.cos() * phi.sin(),
+            y: theta.sin() * phi.sin(),
+            z: phi.cos(),
+        }
     }
 
     /// Sets the angles of the spin
     pub fn set_angles(&mut self, theta: f32, phi: f32) {
-        self.x= theta.cos() * phi.sin() ;
-        self.y= theta.sin() * phi.sin();
-        self.z= phi.cos() ;
+        self.x = theta.cos() * phi.sin();
+        self.y = theta.sin() * phi.sin();
+        self.z = phi.cos();
     }
 
     /// Returns a vector of coordinates [x,y,z] of the spin
@@ -45,24 +56,24 @@ impl Spin {
         ];
 
         let sxyz: Vec<f32> = (0..3)
-            .map(|k| {
-                s[k] * dts.cos() + f[k] * axp * (1.0 - dts.cos()) - axo[k] * dts.sin()
-            })
+            .map(|k| s[k] * dts.cos() + f[k] * axp * (1.0 - dts.cos()) - axo[k] * dts.sin())
             .collect();
-        let ss: f32 = sxyz.iter().map(|x| x*x).sum::<f32>().sqrt();
-        self.x = sxyz[0]/ss;
-        self.y = sxyz[1]/ss;
-        self.z = sxyz[2]/ss;
+        let ss: f32 = sxyz.iter().map(|x| x * x).sum::<f32>().sqrt();
+        self.x = sxyz[0] / ss;
+        self.y = sxyz[1] / ss;
+        self.z = sxyz[2] / ss;
     }
 }
 
 impl PartialEq<Spin> for Spin {
     fn eq(&self, other: &Spin) -> bool {
-        if (self.x - other.x).abs() < 0.001 && (self.y - other.y).abs() < 0.001 
-        && (self.z - other.z).abs() < 0.001 {
+        if (self.x - other.x).abs() < 0.001
+            && (self.y - other.y).abs() < 0.001
+            && (self.z - other.z).abs() < 0.001
+        {
             return true;
         }
-        return false;
+        false
     }
 }
 
