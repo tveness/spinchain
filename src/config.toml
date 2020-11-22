@@ -6,7 +6,7 @@ runs   = 2       #number of runs
 trel   = 0       #relaxation time (simulation run without time dependent field and without writing output)
 tau    = 10000      #period of driving
 lambda = 1       #coupling anisotropy
-hfield = [0,0,0.1] #global magnetic field (applied to entire chain)
+hfield = [0,0,0.0] #global magnetic field (applied to entire chain)
 jvar   = 0.001   #variance of stochastic offset on coupling constants
 hvar   = 0       #variance of stochastic offset on global magnetic field
 method = 2       #integration method (2 = 2nd order suzuki-trotter, 3 = 3rd order)

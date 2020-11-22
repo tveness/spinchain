@@ -21,7 +21,7 @@ fn main() {
     println!("Mz: {}", spin_chain.m(Dir::Z));
 
     //spin_chain.start_log("data.dat");
-    while spin_chain.t<spin_chain.vars.t {
+    while spin_chain.t < spin_chain.vars.t {
         spin_chain.update();
         spin_chain.log();
         //spin_chain.log();
