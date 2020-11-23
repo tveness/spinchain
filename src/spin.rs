@@ -25,6 +25,7 @@ impl Spin {
         }
     }
 
+    #[allow(dead_code)]
     pub fn new_from_angles(theta: f32, phi: f32) -> Spin {
         Spin {
             x: theta.cos() * phi.sin(),
@@ -62,6 +63,9 @@ impl Spin {
         let sxyz: Vec<f32> = (0..3)
             .map(|k| s[k] * dts.cos() + f[k] * axp * (1.0 - dts.cos()) - axo[k] * dts.sin())
             .collect();
+
+//        eprintln!("Omega . S: {}", self.xyz().iter().zip( field.iter()).map(|(x,y)| x*y).sum::<f32>());
+//        eprintln!("Omega . S': {}", sxyz.iter().zip( field.iter()).map(|(x,y)| x*y).sum::<f32>());
         let ss: f32 = sxyz.iter().map(|x| x * x).sum::<f32>().sqrt();
         self.x = sxyz[0] / ss;
         self.y = sxyz[1] / ss;

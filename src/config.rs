@@ -47,7 +47,7 @@ impl Default for Config {
             lambda: 1.0,
             hfield: [0.0, 0.0, 0.0].to_vec(),
             jvar: 0.001,
-            hvar: 0.0,
+            hvar: 0.1,
             method: 2,
             ednsty: -0.66,
             file: "log.dat".to_string(),

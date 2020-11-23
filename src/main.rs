@@ -34,5 +34,5 @@ fn main() {
         pb.set_position(spin_chain.t as u64);
     }
     pb.finish_with_message("Done");
-    println!("Energy density: {}", spin_chain.total_energy());
+    println!("Energy density: {}", spin_chain.total_energy(true));
 }
