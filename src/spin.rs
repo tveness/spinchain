@@ -1,9 +1,9 @@
 ///Struct for storing a 3-dimensional normalised spin
 #[derive(Debug, Clone)]
 pub struct Spin {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
 }
 
 impl Spin {
@@ -17,7 +17,7 @@ impl Spin {
     }
 
     #[allow(dead_code)]
-    pub fn new_xyz(input: &[f32]) -> Spin {
+    pub fn new_xyz(input: &[f64]) -> Spin {
         Spin {
             x: input[0],
             y: input[1],
@@ -26,7 +26,7 @@ impl Spin {
     }
 
     #[allow(dead_code)]
-    pub fn new_from_angles(theta: f32, phi: f32) -> Spin {
+    pub fn new_from_angles(theta: f64, phi: f64) -> Spin {
         Spin {
             x: theta.cos() * phi.sin(),
             y: theta.sin() * phi.sin(),
@@ -36,37 +36,37 @@ impl Spin {
 
     #[allow(dead_code)]
     /// Sets the angles of the spin
-    pub fn set_angles(&mut self, theta: f32, phi: f32) {
+    pub fn set_angles(&mut self, theta: f64, phi: f64) {
         self.x = theta.cos() * phi.sin();
         self.y = theta.sin() * phi.sin();
         self.z = phi.cos();
     }
 
     /// Returns a vector of coordinates [x,y,z] of the spin
-    pub fn xyz(&self) -> Vec<f32> {
+    pub fn xyz(&self) -> Vec<f64> {
         vec![self.x, self.y, self.z]
     }
 
-    pub fn rotate(&mut self, field: &[f32], dt: f32) {
-        let fs: f32 = field.iter().map(|x| x * x).sum::<f32>().sqrt();
-        let f: Vec<f32> = field.iter().map(|x| x / fs).collect();
-        let dts: f32 = fs * dt;
+    pub fn rotate(&mut self, field: &[f64], dt: f64) {
+        let fs: f64 = field.iter().map(|x| x * x).sum::<f64>().sqrt();
+        let f: Vec<f64> = field.iter().map(|x| x / fs).collect();
+        let dts: f64 = fs * dt;
 
-        let s: &[f32] = &self.xyz();
-        let axp: f32 = s.iter().zip(f.iter()).map(|(x, y)| x * y).sum();
-        let axo: Vec<f32> = vec![
+        let s: &[f64] = &self.xyz();
+        let axp: f64 = s.iter().zip(f.iter()).map(|(x, y)| x * y).sum();
+        let axo: Vec<f64> = vec![
             f[1] * s[2] - f[2] * s[1],
             f[2] * s[0] - f[0] * s[2],
             f[0] * s[1] - f[1] * s[0],
         ];
 
-        let sxyz: Vec<f32> = (0..3)
+        let sxyz: Vec<f64> = (0..3)
             .map(|k| s[k] * dts.cos() + f[k] * axp * (1.0 - dts.cos()) - axo[k] * dts.sin())
             .collect();
 
-        //        eprintln!("Omega . S: {}", self.xyz().iter().zip( field.iter()).map(|(x,y)| x*y).sum::<f32>());
-        //        eprintln!("Omega . S': {}", sxyz.iter().zip( field.iter()).map(|(x,y)| x*y).sum::<f32>());
-        let ss: f32 = sxyz.iter().map(|x| x * x).sum::<f32>().sqrt();
+        //        eprintln!("Omega . S: {}", self.xyz().iter().zip( field.iter()).map(|(x,y)| x*y).sum::<f64>());
+        //        eprintln!("Omega . S': {}", sxyz.iter().zip( field.iter()).map(|(x,y)| x*y).sum::<f64>());
+        let ss: f64 = sxyz.iter().map(|x| x * x).sum::<f64>().sqrt();
         self.x = sxyz[0] / ss;
         self.y = sxyz[1] / ss;
         self.z = sxyz[2] / ss;
@@ -104,13 +104,13 @@ mod tests {
 
     #[test]
     fn spin_xyz_other() {
-        let pi: f32 = std::f32::consts::PI;
+        let pi: f64 = std::f64::consts::PI;
         let s1: Spin = Spin::new_from_angles(pi / 4.0, pi / 2.0);
-        let mut s: f32 = 1.0 / 2.0;
+        let mut s: f64 = 1.0 / 2.0;
         s = s.sqrt();
-        let target: Vec<f32> = vec![s, s, 0.];
+        let target: Vec<f64> = vec![s, s, 0.];
 
-        let abs_diff: f32 = s1
+        let abs_diff: f64 = s1
             .xyz()
             .iter()
             .zip(target.iter())
@@ -122,53 +122,53 @@ mod tests {
 
     #[test]
     fn rotation_test_xy_plane() {
-        let pi: f32 = std::f32::consts::PI;
+        let pi: f64 = std::f64::consts::PI;
         let mut s1: Spin = Spin::new_from_angles(0.0, pi / 2.0);
-        let field: Vec<f32> = vec![0.0, 0.0, -1.0];
-        let dt: f32 = 0.01;
-        let mut t: f32 = 0.0;
+        let field: Vec<f64> = vec![0.0, 0.0, -1.0];
+        let dt: f64 = 0.01;
+        let mut t: f64 = 0.0;
         while t + dt < pi / 2.0 {
             t += dt;
             s1.rotate(&field, dt);
         }
-        let abs_diff: f32 = (1.0 - s1.y).abs();
+        let abs_diff: f64 = (1.0 - s1.y).abs();
         println!("t-pi/2: {}", t - pi / 2.0);
         println!("Diff: {}", abs_diff);
         assert!(abs_diff < 0.001);
     }
     #[test]
     fn rotation_test_xz_plane() {
-        let pi: f32 = std::f32::consts::PI;
+        let pi: f64 = std::f64::consts::PI;
         let mut s1: Spin = Spin::new_from_angles(0.0, pi / 2.0);
-        let field: Vec<f32> = vec![0.0, 1.0, 0.0];
-        let dt: f32 = 0.01;
-        let mut t: f32 = 0.0;
+        let field: Vec<f64> = vec![0.0, 1.0, 0.0];
+        let dt: f64 = 0.01;
+        let mut t: f64 = 0.0;
         while t + dt < pi / 2.0 {
             t += dt;
             s1.rotate(&field, dt);
         }
-        let abs_diff: f32 = (1.0 - s1.z).abs();
+        let abs_diff: f64 = (1.0 - s1.z).abs();
         println!("Diff: {}", abs_diff);
         assert!(abs_diff < 0.001);
     }
     #[test]
     fn erotation_test_xz_plane() {
-        let pi: f32 = std::f32::consts::PI;
+        let pi: f64 = std::f64::consts::PI;
         let mut s1: Spin = Spin::new_from_angles(0.0, pi / 2.0);
-        let field: Vec<f32> = vec![0.0, 1.0, 0.0];
-        let dt: f32 = 0.01;
-        let mut t: f32 = 0.0;
+        let field: Vec<f64> = vec![0.0, 1.0, 0.0];
+        let dt: f64 = 0.01;
+        let mut t: f64 = 0.0;
         while t + dt < pi / 2.0 {
             t += dt;
             s1.rotate(&field, dt);
         }
-        let abs_diff: f32 = (1.0 - s1.z).abs();
+        let abs_diff: f64 = (1.0 - s1.z).abs();
         assert!(abs_diff < 0.001);
     }
 
     #[test]
     fn spin_equality() {
-        let pi: f32 = std::f32::consts::PI;
+        let pi: f64 = std::f64::consts::PI;
         let s1: Spin = Spin::new_from_angles(0.0, pi / 2.0);
         let s2: Spin = Spin::new_from_angles(0.0, pi / 2.0);
         let s3: Spin = Spin::new_from_angles(0.1, pi / 2.0);

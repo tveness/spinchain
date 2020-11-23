@@ -27,6 +27,7 @@ fn main() {
             )
             .progress_chars("#>-"),
     );
+//    println!("H field: {:?}",spin_chain.static_h);
 
     while spin_chain.t < spin_chain.vars.t {
         spin_chain.update(true);

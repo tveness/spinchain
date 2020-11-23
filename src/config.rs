@@ -9,27 +9,27 @@ pub struct Config {
     ///is the size of the system
     pub ssize: i32,
     ///the current time of the simulation
-    pub t: f32,
+    pub t: f64,
     ///timestep
-    pub dt: f32,
+    pub dt: f64,
     ///how many runs to perform
     pub runs: i32,
     ///trel
-    pub trel: f32,
+    pub trel: f64,
     ///relaxation time
-    pub tau: f32,
+    pub tau: f64,
     ///anisotropy parameter
-    pub lambda: f32,
+    pub lambda: f64,
     ///static magnetic field [x,y,z]
-    pub hfield: Vec<f32>,
+    pub hfield: Vec<f64>,
     ///variance in spin-spin coupling
-    pub jvar: f32,
+    pub jvar: f64,
     ///variance in magnetic field around hfield
-    pub hvar: f32,
+    pub hvar: f64,
     ///method to use for Trotter-Suzuki decomposition
     pub method: i32,
     ///target energy density for chain initialisation
-    pub ednsty: f32,
+    pub ednsty: f64,
     /// Logging file
     pub file: String,
 }
