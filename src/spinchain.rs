@@ -487,7 +487,7 @@ mod tests {
     #[test]
     fn initialise_energy() {
         let sc: SpinChain = SpinChain::new(None);
-        let abs_diff = (sc.vars.ednsty - sc.total_energy()).abs();
+        let abs_diff = (sc.vars.ednsty - sc.total_energy(true)).abs();
         assert!(abs_diff < 0.01);
     }
 
