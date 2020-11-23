@@ -15,7 +15,6 @@ fn main() {
     println!("Running with configuration:");
     println!("{}", toml::to_string(&spin_chain.vars).unwrap());
 
-
     println!("Mx: {}", spin_chain.m(Dir::X));
     println!("My: {}", spin_chain.m(Dir::Y));
     println!("Mz: {}", spin_chain.m(Dir::Z));
@@ -33,9 +32,7 @@ fn main() {
         spin_chain.update(true);
         spin_chain.log();
         pb.set_position(spin_chain.t as u64);
-        //spin_chain.log();
     }
     pb.finish_with_message("Done");
     println!("Energy density: {}", spin_chain.total_energy());
-
 }

@@ -1,6 +1,6 @@
-hsize = 512
-ssize = 8
-t = 256.0
+hsize = 1024
+ssize = 16
+t = 200.0
 dt = 0.02
 runs = 2
 trel = 0.0
