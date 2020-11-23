@@ -127,7 +127,7 @@ impl SpinChain {
     pub fn log(&self) {
         let e: f32 = self.system_energy();
         let es: f32 = self.total_energy2(true);
-//        let de: f32 = self.de();
+        //        let de: f32 = self.de();
         let mx: f32 = self.m(Dir::X);
         let my: f32 = self.m(Dir::Y);
         let mz: f32 = self.m(Dir::Z);
@@ -142,18 +142,45 @@ impl SpinChain {
                 _ => self.static_h[x].clone(),
             })
             .collect();
-        let even_omega: Vec<Vec<f32>> = self.even_omega(true,0.0);
-        let odd_omega: Vec<Vec<f32>> = self.odd_omega(true,0.0);
-        let spins: Vec<Vec<f32>> = self.spins.iter().map(|x| vec![x.x,x.y,x.z]).collect();
+        let even_omega: Vec<Vec<f32>> = self.even_omega(true, 0.0);
+        let odd_omega: Vec<Vec<f32>> = self.odd_omega(true, 0.0);
+        let spins: Vec<Vec<f32>> = self.spins.iter().map(|x| vec![x.x, x.y, x.z]).collect();
 
-        let even_o_x_s: Vec<Vec<f32>> = even_omega.iter().zip( spins.iter().step_by(2)).map(|(x,y)| vec![ x[1]*y[2] - y[1]*x[2], x[2]*y[0]-x[0]*y[2], x[0]*y[1]-x[1]*y[0]]).collect();
-        let odd_o_x_s: Vec<Vec<f32>> = odd_omega.iter().zip( spins.iter().skip(1).step_by(2)).map(|(x,y)| vec![ x[1]*y[2] - y[1]*x[2], x[2]*y[0]-x[0]*y[2], x[0]*y[1]-x[1]*y[0]]).collect();
+        let even_o_x_s: Vec<Vec<f32>> = even_omega
+            .iter()
+            .zip(spins.iter().step_by(2))
+            .map(|(x, y)| {
+                vec![
+                    x[1] * y[2] - y[1] * x[2],
+                    x[2] * y[0] - x[0] * y[2],
+                    x[0] * y[1] - x[1] * y[0],
+                ]
+            })
+            .collect();
+        let odd_o_x_s: Vec<Vec<f32>> = odd_omega
+            .iter()
+            .zip(spins.iter().skip(1).step_by(2))
+            .map(|(x, y)| {
+                vec![
+                    x[1] * y[2] - y[1] * x[2],
+                    x[2] * y[0] - x[0] * y[2],
+                    x[0] * y[1] - x[1] * y[0],
+                ]
+            })
+            .collect();
 
-        (even_o_x_s.iter().zip( hfield.iter().step_by(2)).map( |(x,y)| x[0]*y[0] + x[1]*y[1] + x[2]*y[2]).sum::<f32>() +odd_o_x_s.iter().zip( hfield.iter().skip(1).step_by(2)).map( |(x,y)| x[0]*y[0] + x[1]*y[1] + x[2]*y[2]).sum::<f32>())/self.vars.hsize as f32
-
+        (even_o_x_s
+            .iter()
+            .zip(hfield.iter().step_by(2))
+            .map(|(x, y)| x[0] * y[0] + x[1] * y[1] + x[2] * y[2])
+            .sum::<f32>()
+            + odd_o_x_s
+                .iter()
+                .zip(hfield.iter().skip(1).step_by(2))
+                .map(|(x, y)| x[0] * y[0] + x[1] * y[1] + x[2] * y[2])
+                .sum::<f32>())
+            / self.vars.hsize as f32
     }
-
-
 
     /// Returns the energy of two spins coupled with j i.e. spin1.j.spin2
     fn sjs_energy(spin1: &Spin, spin2: &Spin, j: &[f32]) -> f32 {
@@ -177,7 +204,7 @@ impl SpinChain {
         sh
     }
 
-    pub fn total_energy2(&self,drive: bool) -> f32 {
+    pub fn total_energy2(&self, drive: bool) -> f32 {
         let mut e: f32 = 0.0;
         let l: usize = self.vars.hsize as usize / 2;
         let h_e: Vec<f32> = self.h_ext(self.vars.t);
@@ -217,8 +244,7 @@ impl SpinChain {
 
     ///Calculate the total energy (with periodic boundary conditions) of the spin chain at the
     ///current time
-    pub fn total_energy(&self, drive: bool
-                        ) -> f32 {
+    pub fn total_energy(&self, drive: bool) -> f32 {
         //E = - S_n J_n S_{n+1} + B_n S_n
 
         //Size is hsize
@@ -253,10 +279,10 @@ impl SpinChain {
         }
 
         //Driving field on sub-system
-        let h_e: Vec<f32> = match drive{
+        let h_e: Vec<f32> = match drive {
             true => self.h_ext(self.vars.t),
-            false=> vec![0.0,0.0,0.0],
-    };
+            false => vec![0.0, 0.0, 0.0],
+        };
         for i in 0..ss {
             sh += SpinChain::sh_energy(&self.spins[i], &h_e);
             //            for k in 0..3 {
@@ -335,9 +361,15 @@ impl SpinChain {
         // Suzuki-Trotter proceeds in three steps:
         // \Omega_n = J_{n-1} S_{n-1} + J_n S_{n+1} - B_n
 
-        self.rotate_even(&self.even_omega(drive,self.vars.dt/2.0), self.vars.dt / 2.0);
-        self.rotate_odd(&self.odd_omega(drive,self.vars.dt/2.0), self.vars.dt);
-        self.rotate_even(&self.even_omega(drive,self.vars.dt/2.0), self.vars.dt / 2.0);
+        self.rotate_even(
+            &self.even_omega(drive, self.vars.dt / 2.0),
+            self.vars.dt / 2.0,
+        );
+        self.rotate_odd(&self.odd_omega(drive, self.vars.dt / 2.0), self.vars.dt);
+        self.rotate_even(
+            &self.even_omega(drive, self.vars.dt / 2.0),
+            self.vars.dt / 2.0,
+        );
 
         self.t += self.vars.dt;
     }
@@ -395,7 +427,7 @@ impl SpinChain {
 
         result
     }
-    fn odd_omega(&self, drive: bool,delta_t: f32) -> Vec<Vec<f32>> {
+    fn odd_omega(&self, drive: bool, delta_t: f32) -> Vec<Vec<f32>> {
         let mut result: Vec<Vec<f32>> = vec![];
 
         let h_ext: Vec<f32> = match drive {
