@@ -37,9 +37,9 @@ impl Spin {
         self.dir.to_vec()
     }
 
-    pub fn rotate(&mut self, field: &[f64;3], dt: f64) {
+    pub fn rotate(&mut self, field: &[f64; 3], dt: f64) {
         let fs: f64 = field.iter().map(|x| x * x).sum::<f64>().sqrt();
-        let f: Vec<f64> = field.iter().map(|x| x / fs).collect();
+        let f: [f64; 3] = [field[0] / fs, field[1] / fs, field[2] / fs];
         let dts: f64 = fs * dt;
 
         let s: &[f64] = &self.xyz();
@@ -112,7 +112,7 @@ mod tests {
     fn rotation_test_xy_plane() {
         let pi: f64 = std::f64::consts::PI;
         let mut s1: Spin = Spin::new_from_angles(0.0, pi / 2.0);
-        let field: Vec<f64> = vec![0.0, 0.0, -1.0];
+        let field: [f64; 3] = [0.0, 0.0, -1.0];
         let dt: f64 = 0.01;
         let mut t: f64 = 0.0;
         while t + dt < pi / 2.0 {
@@ -128,7 +128,7 @@ mod tests {
     fn rotation_test_xz_plane() {
         let pi: f64 = std::f64::consts::PI;
         let mut s1: Spin = Spin::new_from_angles(0.0, pi / 2.0);
-        let field: Vec<f64> = vec![0.0, 1.0, 0.0];
+        let field: [f64; 3] = [0.0, 1.0, 0.0];
         let dt: f64 = 0.01;
         let mut t: f64 = 0.0;
         while t + dt < pi / 2.0 {
@@ -143,7 +143,7 @@ mod tests {
     fn erotation_test_xz_plane() {
         let pi: f64 = std::f64::consts::PI;
         let mut s1: Spin = Spin::new_from_angles(0.0, pi / 2.0);
-        let field: Vec<f64> = vec![0.0, 1.0, 0.0];
+        let field: [f64; 3] = [0.0, 1.0, 0.0];
         let dt: f64 = 0.01;
         let mut t: f64 = 0.0;
         while t + dt < pi / 2.0 {
