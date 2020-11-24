@@ -18,7 +18,7 @@ pub enum Dir {
 ///Stores spins, couplings, fields, and allows dynamical updates via a Suzuki-Trotter decomposition
 pub struct SpinChain {
     ///Coupling matrices for spins
-    j_couple: Vec<Vec<f64>>,
+    j_couple: Vec<[f64; 3]>,
     ///Static field acting on the system
     pub static_h: Vec<Vec<f64>>,
     ///Spins
@@ -88,9 +88,9 @@ impl SpinChain {
         //Initialise J as [1+N(jvar),1+N(jvar),lamba+N(jvar)]
         let j_normal = Normal::new(0.0, conf.jvar).unwrap();
         //        let v = normal.sample(&mut r);
-        let j_couple: Vec<Vec<f64>> = (0..conf.hsize)
+        let j_couple: Vec<[f64; 3]> = (0..conf.hsize)
             .map(|x| {
-                vec![
+                [
                     1.0 + j_normal.sample(&mut r),
                     1.0 + j_normal.sample(&mut r),
                     conf.lambda + j_normal.sample(&mut r),
@@ -144,7 +144,11 @@ impl SpinChain {
             .collect();
         let even_omega: Vec<Vec<f64>> = self.even_omega(true, 0.0);
         let odd_omega: Vec<Vec<f64>> = self.odd_omega(true, 0.0);
-        let spins: Vec<Vec<f64>> = self.spins.iter().map(|x| vec![x.x, x.y, x.z]).collect();
+        let spins: Vec<Vec<f64>> = self
+            .spins
+            .iter()
+            .map(|x| vec![x.dir[0], x.dir[1], x.dir[2]])
+            .collect();
 
         let even_o_x_s: Vec<Vec<f64>> = even_omega
             .iter()
@@ -217,7 +221,7 @@ impl SpinChain {
                 _ => self.static_h[x].clone(),
             })
             .collect();
-//        println!("h field: {:?} at time t: {}", hfield, self.t);
+        //        println!("h field: {:?} at time t: {}", hfield, self.t);
 
         for j in 0..l - 1 {
             for k in 0..3 {
@@ -338,16 +342,16 @@ impl SpinChain {
 
         //Now calculate magnetisation for this class of spins
         let result: f64 = match axis {
-            Dir::X => spins.map(|s| s.x).sum(),
-            Dir::Y => spins.map(|s| s.y).sum(),
-            Dir::Z => spins.map(|s| s.z).sum(),
+            Dir::X => spins.map(|s| s.dir[0]).sum(),
+            Dir::Y => spins.map(|s| s.dir[1]).sum(),
+            Dir::Z => spins.map(|s| s.dir[2]).sum(),
         };
         result / (s as f64)
     }
 
     ///Calculate the driving field at the current time
     fn h_ext(&self, t: f64) -> Vec<f64> {
-//            return vec![0.0, 0.0, 0.0];
+        //            return vec![0.0, 0.0, 0.0];
         if t < 0.0 {
             return vec![0.0, 0.0, 0.0];
         }
@@ -532,13 +536,13 @@ mod tests {
     fn interactions_off() {
         let mut sc: SpinChain = SpinChain::new(None);
         //Turn off interactions
-        sc.j_couple = vec![vec![0.0, 0.0, 0.0]; sc.j_couple.len()];
+        sc.j_couple = vec![[0.0, 0.0, 0.0]; sc.j_couple.len()];
         //Point all spins along the x axis
         sc.spins = vec![Spin::new_xyz(&[1.0, 0.0, 0.0]); sc.spins.len()];
         sc.static_h = vec![vec![0.0, 0.0, 1.0]; sc.static_h.len()];
         //Update with just static field, and check that each spin evolves correctly
         for i in 0..100 {
-            let abs_diff: f64 = (sc.spins[7].x - (sc.vars.dt * i as f64).cos()).abs();
+            let abs_diff: f64 = (sc.spins[7].dir[0] - (sc.vars.dt * i as f64).cos()).abs();
             sc.update(false);
             println!("spin[7]: {:?}", sc.spins[7].xyz());
             println!("cos[it]: {}", (sc.vars.dt * i as f64).cos());

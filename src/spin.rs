@@ -1,50 +1,40 @@
 ///Struct for storing a 3-dimensional normalised spin
 #[derive(Debug, Clone)]
 pub struct Spin {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
+    pub dir: [f64; 3],
 }
 
 impl Spin {
     #[allow(dead_code)]
     pub fn new() -> Spin {
         Spin {
-            x: 1.0,
-            y: 0.0,
-            z: 0.0,
+            dir: [1.0, 0.0, 0.0],
         }
     }
 
     #[allow(dead_code)]
     pub fn new_xyz(input: &[f64]) -> Spin {
         Spin {
-            x: input[0],
-            y: input[1],
-            z: input[2],
+            dir: [input[0], input[1], input[2]],
         }
     }
 
     #[allow(dead_code)]
     pub fn new_from_angles(theta: f64, phi: f64) -> Spin {
         Spin {
-            x: theta.cos() * phi.sin(),
-            y: theta.sin() * phi.sin(),
-            z: phi.cos(),
+            dir: [theta.cos() * phi.sin(), theta.sin() * phi.sin(), phi.cos()],
         }
     }
 
     #[allow(dead_code)]
     /// Sets the angles of the spin
     pub fn set_angles(&mut self, theta: f64, phi: f64) {
-        self.x = theta.cos() * phi.sin();
-        self.y = theta.sin() * phi.sin();
-        self.z = phi.cos();
+        self.dir = [theta.cos() * phi.sin(), theta.sin() * phi.sin(), phi.cos()];
     }
 
     /// Returns a vector of coordinates [x,y,z] of the spin
     pub fn xyz(&self) -> Vec<f64> {
-        vec![self.x, self.y, self.z]
+        self.dir.to_vec()
     }
 
     pub fn rotate(&mut self, field: &[f64], dt: f64) {
@@ -67,17 +57,15 @@ impl Spin {
         //        eprintln!("Omega . S: {}", self.xyz().iter().zip( field.iter()).map(|(x,y)| x*y).sum::<f64>());
         //        eprintln!("Omega . S': {}", sxyz.iter().zip( field.iter()).map(|(x,y)| x*y).sum::<f64>());
         let ss: f64 = sxyz.iter().map(|x| x * x).sum::<f64>().sqrt();
-        self.x = sxyz[0] / ss;
-        self.y = sxyz[1] / ss;
-        self.z = sxyz[2] / ss;
+        self.dir = [sxyz[0] / ss, sxyz[1] / ss, sxyz[2] / ss];
     }
 }
 
 impl PartialEq<Spin> for Spin {
     fn eq(&self, other: &Spin) -> bool {
-        if (self.x - other.x).abs() < 0.001
-            && (self.y - other.y).abs() < 0.001
-            && (self.z - other.z).abs() < 0.001
+        if (self.dir[0] - other.dir[0]).abs() < 0.001
+            && (self.dir[1] - other.dir[1]).abs() < 0.001
+            && (self.dir[2] - other.dir[2]).abs() < 0.001
         {
             return true;
         }
@@ -131,7 +119,7 @@ mod tests {
             t += dt;
             s1.rotate(&field, dt);
         }
-        let abs_diff: f64 = (1.0 - s1.y).abs();
+        let abs_diff: f64 = (1.0 - s1.dir[1]).abs();
         println!("t-pi/2: {}", t - pi / 2.0);
         println!("Diff: {}", abs_diff);
         assert!(abs_diff < 0.001);
@@ -147,7 +135,7 @@ mod tests {
             t += dt;
             s1.rotate(&field, dt);
         }
-        let abs_diff: f64 = (1.0 - s1.z).abs();
+        let abs_diff: f64 = (1.0 - s1.dir[2]).abs();
         println!("Diff: {}", abs_diff);
         assert!(abs_diff < 0.001);
     }
@@ -162,7 +150,7 @@ mod tests {
             t += dt;
             s1.rotate(&field, dt);
         }
-        let abs_diff: f64 = (1.0 - s1.z).abs();
+        let abs_diff: f64 = (1.0 - s1.dir[2]).abs();
         assert!(abs_diff < 0.001);
     }
 
