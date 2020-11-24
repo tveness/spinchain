@@ -37,7 +37,7 @@ impl Spin {
         self.dir.to_vec()
     }
 
-    pub fn rotate(&mut self, field: &[f64], dt: f64) {
+    pub fn rotate(&mut self, field: &[f64;3], dt: f64) {
         let fs: f64 = field.iter().map(|x| x * x).sum::<f64>().sqrt();
         let f: Vec<f64> = field.iter().map(|x| x / fs).collect();
         let dts: f64 = fs * dt;

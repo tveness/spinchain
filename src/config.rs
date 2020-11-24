@@ -50,7 +50,7 @@ impl Default for Config {
             hvar: 0.1,
             method: 2,
             ednsty: -0.66,
-            file: "log.dat".to_string(),
+            file: "log".to_string(),
         }
     }
 }

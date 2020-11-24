@@ -10,7 +10,7 @@ use self::spinchain::{Dir, SpinChain};
 
 fn main() {
     //Create spin chain with parameters in file "config.toml"
-    let mut spin_chain: SpinChain = SpinChain::new(Some("config.toml"));
+    let mut spin_chain: SpinChain = SpinChain::new(Some("config.toml"), 0);
     //    let mut spin_chain: SpinChain = SpinChain::new(None);
     println!("Running with configuration:");
     println!("{}", toml::to_string(&spin_chain.vars).unwrap());

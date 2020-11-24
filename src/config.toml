@@ -11,4 +11,4 @@ jvar = 0.001
 hvar = 0.0
 method = 2
 ednsty = -0.66
-file = "log.dat"
+file = "log"
