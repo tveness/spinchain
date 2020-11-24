@@ -55,7 +55,7 @@ impl SpinChain {
     /// The spins
     /// are then initialised in a random configuration at the correct energy density for the case
     /// of isotropic coupling and zero magnetic field
-    pub fn new(filename: Option<&str>, num: u32) -> SpinChain {
+    pub fn new(filename: Option<&str>, num: usize) -> SpinChain {
         //Read configuration file
         //Can make this refer to a default if error and then write a config file
         let mut r = rand::thread_rng();
