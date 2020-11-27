@@ -41,10 +41,8 @@ impl Spin {
         let fs: f64 = field.iter().map(|x| x * x).sum::<f64>().sqrt();
         let f: [f64; 3] = [field[0] / fs, field[1] / fs, field[2] / fs];
         let dts: f64 = fs * dt;
-        let dc: f64 = dts.cos();
-        let ds: f64 = dts.sin();
 
-        let s: &[f64] = &self.dir;
+        let s: &[f64] = &self.xyz();
         let axp: f64 = s.iter().zip(f.iter()).map(|(x, y)| x * y).sum();
         let axo: Vec<f64> = vec![
             f[1] * s[2] - f[2] * s[1],
@@ -52,14 +50,14 @@ impl Spin {
             f[0] * s[1] - f[1] * s[0],
         ];
 
-        let sxyz: [f64; 3] = [
-            (s[0] * dc + f[0] * axp * (1.0 - dc) - axo[0] * ds),
-            (s[1] * dc + f[1] * axp * (1.0 - dc) - axo[1] * ds),
-            (s[2] * dc + f[2] * axp * (1.0 - dc) - axo[2] * ds),
-        ];
-        let ss: f64 = sxyz.iter().map(|x| x * x).sum::<f64>().sqrt();
+        let sxyz: Vec<f64> = (0..3)
+            .map(|k| s[k] * dts.cos() + f[k] * axp * (1.0 - dts.cos()) - axo[k] * dts.sin())
+            .collect();
 
-        self.dir = [sxyz[0] / ss, sxyz[1] / ss, sxyz[2] / ss]
+        //        eprintln!("Omega . S: {}", self.xyz().iter().zip( field.iter()).map(|(x,y)| x*y).sum::<f64>());
+        //        eprintln!("Omega . S': {}", sxyz.iter().zip( field.iter()).map(|(x,y)| x*y).sum::<f64>());
+        let ss: f64 = sxyz.iter().map(|x| x * x).sum::<f64>().sqrt();
+        self.dir = [sxyz[0] / ss, sxyz[1] / ss, sxyz[2] / ss];
     }
 }
 

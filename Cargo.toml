@@ -15,5 +15,17 @@ rand_distr = "0.3.0"
 itertools = "0.9.0"
 indicatif = "0.15.0"
 
-[profile.release]
-debug = true
+#[profile.release]
+#debug = true
+
+[[bench]]
+name = "spin_rotate"
+harness = false
+
+[[bench]]
+name = "even_omega"
+harness = false
+
+[dev-dependencies]
+criterion = "0.3"
+

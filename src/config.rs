@@ -32,6 +32,8 @@ pub struct Config {
     pub ednsty: f64,
     /// Logging file
     pub file: String,
+    /// Stroboscopic on?
+    pub strob: bool,
 }
 
 impl Default for Config {
@@ -51,6 +53,7 @@ impl Default for Config {
             method: 2,
             ednsty: -0.66,
             file: "log".to_string(),
+            strob: false,
         }
     }
 }
