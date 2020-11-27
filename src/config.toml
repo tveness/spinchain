@@ -1,9 +1,9 @@
-hsize = 2000
+hsize = 100
 ssize = 16
 t = 1000.0
 dt = 0.02
 runs = 4
-trel = 0
+trel = 0.0
 tau = 10.0
 lambda = 1.0
 hfield = [0.0, 0.0, 0.0]
@@ -12,3 +12,5 @@ hvar = 0.0
 method = 2
 ednsty = -0.66
 file = "log"
+strob = false
+offset = 8

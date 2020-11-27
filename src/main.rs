@@ -1,4 +1,5 @@
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
+use std::fs;
 mod config;
 use self::config::Config;
 
@@ -21,12 +22,12 @@ fn main() {
         .progress_chars("#>-");
 
     //Want to read num from file
-    let conf: Config = SpinChain::read_config("config.toml");
+    let mut conf: Config = SpinChain::read_config("config.toml");
 
     let num: usize = conf.runs as usize;
 
     for i in 0..num {
-        let mut spin_chain: SpinChain = SpinChain::new(Some("config.toml"), i);
+        let mut spin_chain: SpinChain = SpinChain::new(Some("config.toml"), i+conf.offset as usize);
         let pb = m.add(ProgressBar::new(spin_chain.vars.t as u64));
         pb.set_style(sty.clone());
 
@@ -43,8 +44,9 @@ fn main() {
     }
 
     m.join_and_clear().unwrap();
+
+    //Update config
+    conf.offset += num as u32;
+    fs::write("config.toml", toml::to_string(&conf).unwrap()).unwrap();
     println!("Finished {} runs", num);
-
-
-
 }
