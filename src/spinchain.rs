@@ -2,7 +2,9 @@
 #![allow(unused_variables)]
 
 use super::*;
-use rand_distr::{Distribution, Normal};
+use rand::Rng;
+use rand_distr::{Distribution, Normal, Uniform};
+use std::f64::consts::PI;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -124,6 +126,63 @@ impl SpinChain {
             static_h,
             t: t0,
             file,
+        }
+    }
+    /// Does a Metropolis update for a single spin with inverse temperature beta
+    pub fn metropolis_update(&mut self, beta: f64) {
+        let mut rng = rand::thread_rng();
+        let unif = Uniform::from(0.0..1.0);
+
+        // Select a spin
+        let s: usize = self.vars.hsize as usize;
+        let index: usize = rng.gen_range(0, s) as usize;
+        let local_field: [f64; 3] = match index {
+            x if index < self.vars.ssize as usize => [
+                self.static_h[index][0] + 1.0,
+                self.static_h[index][1],
+                self.static_h[index][2],
+            ],
+            x => self.static_h[index],
+        };
+        //Calculate initial energy
+        //First get left and right spins and couplings
+        let s_c: &Spin = &self.spins[index];
+        let s_l: &Spin = match index {
+            _ if index == 0 => &self.spins[s - 1],
+            _ => &self.spins[index - 1],
+        };
+
+        let s_r: &Spin = match index {
+            _ if index == s - 1 => &self.spins[0],
+            _ => &self.spins[index + 1],
+        };
+
+        let j_l: &[f64; 3] = match index {
+            _ if index == 0 => &self.j_couple[s - 1],
+            _ => &self.j_couple[index - 1],
+        };
+
+        let j_r: &[f64; 3] = &self.j_couple[index];
+
+        let ei: f64 = -Self::sjs_energy(s_l, s_c, j_l) - Self::sjs_energy(s_c, s_r, j_r)
+            + Self::sh_energy(s_c, &local_field);
+
+        // Select random angles
+        let theta: f64 = 2.0 * PI * unif.sample(&mut rng);
+        let phi: f64 = (1.0 - unif.sample(&mut rng)).acos();
+        let new_spin: Spin = Spin::new_from_angles(theta, phi);
+
+        let de: f64 = -Self::sjs_energy(s_l, &new_spin, j_l)
+            - Self::sjs_energy(&new_spin, s_r, j_r)
+            + Self::sh_energy(&new_spin, &local_field)
+            - ei;
+
+        // Evaluate energy difference
+
+        // Accept/reject
+        // Accept if <0, or w/ prob e^{-\beta \Delta E} otherwise
+        if de < 0.0 || unif.sample(&mut rng) < (-beta * de).exp() {
+            self.spins[index].dir = new_spin.dir;
         }
     }
     pub fn log(&self) {
@@ -530,5 +589,25 @@ mod tests {
         println!("hv: {}", hvar_n);
 
         assert!(hh <= 2.0 * 3.0 * hvar_n);
+    }
+
+    #[test]
+    fn metropolis_low_t() {
+        let mut sc: SpinChain = SpinChain::new(None, 0);
+        //Make the chain clean
+        sc.j_couple = vec![ [1.0,1.0,1.0];sc.vars.hsize as usize];
+        sc.static_h = vec![ [0.0,0.0,0.0];sc.vars.hsize as usize];
+        for i in 0..3e6 as usize {
+            sc.metropolis_update(1000.0);
+        }
+        //Expect energy to be approx -L - B l
+        let lL: f64 = sc.vars.ssize as f64 / sc.vars.hsize as f64;
+        let e: f64 = sc.total_energy2(true);
+        println!("Exp: {}", -1.0-lL);
+        println!("Actual: {}", e);
+        let ediff: f64 = ( -1.0 - lL - e).abs();
+        assert!(ediff<0.01);
+
+
     }
 }

@@ -27,7 +27,8 @@ fn main() {
     let num: usize = conf.runs as usize;
 
     for i in 0..num {
-        let mut spin_chain: SpinChain = SpinChain::new(Some("config.toml"), i+conf.offset as usize);
+        let mut spin_chain: SpinChain =
+            SpinChain::new(Some("config.toml"), i + conf.offset as usize);
         let pb = m.add(ProgressBar::new(spin_chain.vars.t as u64));
         pb.set_style(sty.clone());
 
