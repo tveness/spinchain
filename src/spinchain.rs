@@ -138,7 +138,7 @@ impl SpinChain {
         let index: usize = rng.gen_range(0, s) as usize;
         let local_field: [f64; 3] = match index {
             x if index < self.vars.ssize as usize => [
-                self.static_h[index][0] + 1.0,
+                self.static_h[index][0],
                 self.static_h[index][1],
                 self.static_h[index][2],
             ],
@@ -595,19 +595,17 @@ mod tests {
     fn metropolis_low_t() {
         let mut sc: SpinChain = SpinChain::new(None, 0);
         //Make the chain clean
-        sc.j_couple = vec![ [1.0,1.0,1.0];sc.vars.hsize as usize];
-        sc.static_h = vec![ [0.0,0.0,0.0];sc.vars.hsize as usize];
+        sc.j_couple = vec![[1.0, 1.0, 1.0]; sc.vars.hsize as usize];
+        sc.static_h = vec![[0.0, 0.0, 0.0]; sc.vars.hsize as usize];
         for i in 0..3e6 as usize {
             sc.metropolis_update(1000.0);
         }
         //Expect energy to be approx -L - B l
         let lL: f64 = sc.vars.ssize as f64 / sc.vars.hsize as f64;
         let e: f64 = sc.total_energy2(true);
-        println!("Exp: {}", -1.0-lL);
+        println!("Exp: {}", -1.0);
         println!("Actual: {}", e);
-        let ediff: f64 = ( -1.0 - lL - e).abs();
-        assert!(ediff<0.01);
-
-
+        let ediff: f64 = (-1.0 - e).abs();
+        assert!(ediff < 0.01);
     }
 }

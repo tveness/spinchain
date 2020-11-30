@@ -29,12 +29,19 @@ fn main() {
     for i in 0..num {
         let mut spin_chain: SpinChain =
             SpinChain::new(Some("config.toml"), i + conf.offset as usize);
+
+        // Initialise at a particular temperature, say T=1
+
         let pb = m.add(ProgressBar::new(spin_chain.vars.t as u64));
         pb.set_style(sty.clone());
 
         pb.set_message(&format!("Run {}", i));
 
         let _ = thread::spawn(move || {
+            for _ in 0..1e7 as usize {
+                spin_chain.metropolis_update(1.0);
+            }
+            spin_chain.log();
             while spin_chain.t < spin_chain.vars.t {
                 spin_chain.update(true);
                 spin_chain.log();
