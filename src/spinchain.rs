@@ -138,7 +138,7 @@ impl SpinChain {
         let index: usize = rng.gen_range(0, s) as usize;
         let local_field: [f64; 3] = match index {
             x if index < self.vars.ssize as usize => [
-                self.static_h[index][0],// + 1.0,
+                self.static_h[index][0], // + 1.0,
                 self.static_h[index][1],
                 self.static_h[index][2],
             ],
@@ -166,19 +166,19 @@ impl SpinChain {
 
         let mut ei: f64 = 0.0;
         for k in 0..3 {
-            ei -= s_l.dir[k]*j_l[k]*s_c.dir[k] + s_r.dir[k]*j_r[k]*s_c.dir[k] ; 
-            ei += s_c.dir[k]*local_field[k];
+            ei -= s_l.dir[k] * j_l[k] * s_c.dir[k] + s_r.dir[k] * j_r[k] * s_c.dir[k];
+            ei += s_c.dir[k] * local_field[k];
         }
 
         // Select random angles
         let theta: f64 = 2.0 * PI * unif.sample(&mut rng);
-        let phi: f64 = (1.0 - 2.0*unif.sample(&mut rng)).acos();
+        let phi: f64 = (1.0 - 2.0 * unif.sample(&mut rng)).acos();
         let new_spin: Spin = Spin::new_from_angles(theta, phi);
 
         let mut de: f64 = -ei;
         for k in 0..3 {
-            de -= s_l.dir[k]*j_l[k]*new_spin.dir[k] + s_r.dir[k]*j_r[k]*new_spin.dir[k] ; 
-            de += new_spin.dir[k]*local_field[k];
+            de -= s_l.dir[k] * j_l[k] * new_spin.dir[k] + s_r.dir[k] * j_r[k] * new_spin.dir[k];
+            de += new_spin.dir[k] * local_field[k];
         }
 
         // Evaluate energy difference
@@ -237,7 +237,7 @@ impl SpinChain {
 
         let h_e: [f64; 3] = match self.vars.drive {
             true => self.h_ext(self.t),
-            false => [0.0,0.0,0.0],
+            false => [0.0, 0.0, 0.0],
         };
 
         let hfield: Vec<[f64; 3]> = (0..self.vars.hsize as usize)
@@ -250,18 +250,14 @@ impl SpinChain {
 
         for j in 0..l - 1 {
             for k in 0..3 {
-                e -= self.spins[j].dir[k]
-                    * self.j_couple[j][k]
-                    * self.spins[j + 1].dir[k];
+                e -= self.spins[j].dir[k] * self.j_couple[j][k] * self.spins[j + 1].dir[k];
                 e += self.spins[j].dir[k] * hfield[j][k];
             }
         }
 
         for k in 0..3 {
-            e -= self.spins[l - 1].dir[k]
-                * self.j_couple[l - 1][k]
-                * self.spins[0].dir[k];
-            e += self.spins[l-1].dir[k] * hfield[l-1][k];
+            e -= self.spins[l - 1].dir[k] * self.j_couple[l - 1][k] * self.spins[0].dir[k];
+            e += self.spins[l - 1].dir[k] * hfield[l - 1][k];
         }
 
         e / (self.vars.hsize as f64)
@@ -329,16 +325,13 @@ impl SpinChain {
         //Size is ssize
         let s: usize = self.vars.ssize as usize;
 
-        //Get energy of s J s terms
-        let mut sjs: f64 = 0.0;
-        for i in 0..s - 1 {
-            sjs -= SpinChain::sjs_energy(&self.spins[i], &self.spins[i + 1], &self.j_couple[i]);
-        }
+        //
+        let mut e: f64 = 0.0;
 
         //Get energy of magnetic field terms
         let h_e: [f64; 3] = match self.vars.drive {
             true => self.h_ext(self.t),
-            false => [0.0,0.0,0.0],
+            false => [0.0, 0.0, 0.0],
         };
 
         // Field is static field + external field
@@ -346,12 +339,14 @@ impl SpinChain {
             .map(|x| SpinChain::sum_vec(&self.static_h[x], &h_e))
             .collect();
 
-        let mut sh: f64 = 0.0;
-        for (i, item) in h.iter().enumerate() {
-            sh += SpinChain::sh_energy(&self.spins[i], &item);
+        for i in 0..s - 1 {
+            for k in 0..3 {
+                e -= self.spins[i].dir[k] * self.j_couple[i][k] * self.spins[i + 1].dir[k];
+                e += self.spins[i].dir[k] * h[i][k];
+            }
         }
 
-        (sjs + sh) / s as f64
+        e / (s - 1) as f64
     }
 
     ///Calculate the magnetisation in direction ```Dir``` for the system proper
@@ -603,10 +598,10 @@ mod tests {
         //Expect energy to be approx -L - B l
         let lL: f64 = sc.vars.ssize as f64 / sc.vars.hsize as f64;
         let e: f64 = sc.total_energy2();
-//        println!("Exp: {}", -1.0 - lL);
+        //        println!("Exp: {}", -1.0 - lL);
         println!("Exp: {}", -1.0);
         println!("Actual: {}", e);
-//        let ediff: f64 = (-1.0 - lL - e).abs();
+        //        let ediff: f64 = (-1.0 - lL - e).abs();
         let ediff: f64 = (-1.0 - e).abs();
         assert!(ediff < 0.01);
     }
