@@ -231,7 +231,10 @@ impl SpinChain {
 
         let l: usize = self.vars.hsize as usize / 2;
 
-        let h_e: [f64; 3] = self.h_ext(self.t);
+        let h_e: [f64; 3] = match self.vars.drive {
+            true => self.h_ext(self.t),
+            false => [0.0,0.0,0.0],
+        };
 
         let hfield: Vec<[f64; 3]> = (0..self.vars.hsize as usize)
             .map(|x| match x {
@@ -337,7 +340,10 @@ impl SpinChain {
         }
 
         //Get energy of magnetic field terms
-        let h_e: [f64; 3] = self.h_ext(self.t);
+        let h_e: [f64; 3] = match self.vars.drive {
+            true => self.h_ext(self.t),
+            false => [0.0,0.0,0.0],
+        };
 
         // Field is static field + external field
         let h: Vec<[f64; 3]> = (0..s)
