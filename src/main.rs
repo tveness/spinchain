@@ -38,12 +38,12 @@ fn main() {
         pb.set_message(&format!("Run {}", i));
 
         let _ = thread::spawn(move || {
-            for _ in 0..1e7 as usize {
-                spin_chain.metropolis_update(1.0);
+            for _ in 0..2e7 as usize {
+                spin_chain.metropolis_update();
             }
             spin_chain.log();
             while spin_chain.t < spin_chain.vars.t {
-                spin_chain.update(true);
+                spin_chain.update();
                 spin_chain.log();
                 pb.set_position(spin_chain.t as u64);
             }

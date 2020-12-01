@@ -36,6 +36,10 @@ pub struct Config {
     pub strob: bool,
     /// Offset for log
     pub offset: u32,
+    /// Drive on/off
+    pub drive: bool,
+    /// Inverse temperature for Monte Carlo
+    pub beta: f64,
 }
 
 impl Default for Config {
@@ -57,6 +61,8 @@ impl Default for Config {
             file: "log".to_string(),
             strob: false,
             offset: 0,
+            drive: true,
+            beta: 1.0,
         }
     }
 }

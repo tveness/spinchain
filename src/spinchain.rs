@@ -129,7 +129,7 @@ impl SpinChain {
         }
     }
     /// Does a Metropolis update for a single spin with inverse temperature beta
-    pub fn metropolis_update(&mut self, beta: f64) {
+    pub fn metropolis_update(&mut self) {
         let mut rng = rand::thread_rng();
         let unif = Uniform::from(0.0..1.0);
 
@@ -138,7 +138,7 @@ impl SpinChain {
         let index: usize = rng.gen_range(0, s) as usize;
         let local_field: [f64; 3] = match index {
             x if index < self.vars.ssize as usize => [
-                self.static_h[index][0],
+                self.static_h[index][0] + 1.0,
                 self.static_h[index][1],
                 self.static_h[index][2],
             ],
@@ -181,13 +181,13 @@ impl SpinChain {
 
         // Accept/reject
         // Accept if <0, or w/ prob e^{-\beta \Delta E} otherwise
-        if de < 0.0 || unif.sample(&mut rng) < (-beta * de).exp() {
+        if de < 0.0 || unif.sample(&mut rng) < (-self.vars.beta * de).exp() {
             self.spins[index].dir = new_spin.dir;
         }
     }
     pub fn log(&self) {
         let e: f64 = self.system_energy();
-        let es: f64 = self.total_energy2(true);
+        let es: f64 = self.total_energy2();
         //        let de: f64 = self.de();
         let m: [f64; 3] = self.m();
         let s: f64 = self.vars.ssize as f64;
@@ -226,7 +226,7 @@ impl SpinChain {
         sh
     }
 
-    pub fn total_energy2(&self, drive: bool) -> f64 {
+    pub fn total_energy2(&self) -> f64 {
         let mut e: f64 = 0.0;
 
         let l: usize = self.vars.hsize as usize / 2;
@@ -270,7 +270,7 @@ impl SpinChain {
 
     ///Calculate the total energy (with periodic boundary conditions) of the spin chain at the
     ///current time
-    pub fn total_energy(&self, drive: bool) -> f64 {
+    pub fn total_energy(&self) -> f64 {
         //E = - S_n J_n S_{n+1} + B_n S_n
 
         //Size is hsize
@@ -305,7 +305,7 @@ impl SpinChain {
         }
 
         //Driving field on sub-system
-        let h_e: [f64; 3] = match drive {
+        let h_e: [f64; 3] = match self.vars.drive {
             true => self.h_ext(self.t),
             false => [0.0, 0.0, 0.0],
         };
@@ -384,12 +384,12 @@ impl SpinChain {
     }
 
     ///Update one time-step using Suzuki-Trotter evolution
-    pub fn update(&mut self, drive: bool) {
+    pub fn update(&mut self) {
         // Suzuki-Trotter proceeds in three steps:
         // \Omega_n = J_{n-1} S_{n-1} + J_n S_{n+1} - B_n
 
         // Calculate field here
-        let h_ext: [f64; 3] = match drive {
+        let h_ext: [f64; 3] = match self.vars.drive {
             true => self.h_ext(self.t + self.vars.dt),
             false => [0.0, 0.0, 0.0],
         };
@@ -406,15 +406,9 @@ impl SpinChain {
             })
             .collect();
 
-        self.rotate_even(
-            &self.even_omega(drive, &h, self.vars.dt / 2.0),
-            self.vars.dt / 2.0,
-        );
-        self.rotate_odd(&self.odd_omega(drive, &h, self.vars.dt / 2.0), self.vars.dt);
-        self.rotate_even(
-            &self.even_omega(drive, &h, self.vars.dt / 2.0),
-            self.vars.dt / 2.0,
-        );
+        self.rotate_even(&self.even_omega(&h, self.vars.dt / 2.0), self.vars.dt / 2.0);
+        self.rotate_odd(&self.odd_omega(&h, self.vars.dt / 2.0), self.vars.dt);
+        self.rotate_even(&self.even_omega(&h, self.vars.dt / 2.0), self.vars.dt / 2.0);
 
         self.t += self.vars.dt;
     }
@@ -444,7 +438,7 @@ impl SpinChain {
         [l[0] + r[0] - h[0], l[1] + r[1] - h[1], l[2] + r[2] - h[2]]
     }
 
-    fn even_omega(&self, drive: bool, h: &[[f64; 3]], delta_t: f64) -> Vec<[f64; 3]> {
+    fn even_omega(&self, h: &[[f64; 3]], delta_t: f64) -> Vec<[f64; 3]> {
         let l: usize = self.spins.len() as usize / 2;
         let mut result: Vec<[f64; 3]> = Vec::with_capacity(l);
         // J_{2n-1} S_{2n-1} + J_{2n} S_{2n+1} - B
@@ -465,7 +459,7 @@ impl SpinChain {
 
         result
     }
-    fn odd_omega(&self, drive: bool, h: &[[f64; 3]], delta_t: f64) -> Vec<[f64; 3]> {
+    fn odd_omega(&self, h: &[[f64; 3]], delta_t: f64) -> Vec<[f64; 3]> {
         let l: usize = self.spins.len() as usize / 2;
         let mut result: Vec<[f64; 3]> = Vec::with_capacity(l);
         // J_{2n} S_{2n} + J_{2n+1} S_{2n+2}
@@ -554,7 +548,7 @@ mod tests {
     #[test]
     fn initialise_energy() {
         let sc: SpinChain = SpinChain::new(None, 0);
-        let abs_diff = (sc.vars.ednsty - sc.total_energy(true)).abs();
+        let abs_diff = (sc.vars.ednsty - sc.total_energy()).abs();
         assert!(abs_diff < 0.01);
     }
 
@@ -566,10 +560,11 @@ mod tests {
         //Point all spins along the x axis
         sc.spins = vec![Spin::new_xyz(&[1.0, 0.0, 0.0]); sc.spins.len()];
         sc.static_h = vec![[0.0, 0.0, 1.0]; sc.static_h.len()];
+        sc.vars.drive = false;
         //Update with just static field, and check that each spin evolves correctly
         for i in 0..100 {
             let abs_diff: f64 = (sc.spins[7].dir[0] - (sc.vars.dt * i as f64).cos()).abs();
-            sc.update(false);
+            sc.update();
             println!("spin[7]: {:?}", sc.spins[7].xyz());
             println!("cos[it]: {}", (sc.vars.dt * i as f64).cos());
             println!("abs diff: {}", abs_diff);
@@ -597,15 +592,16 @@ mod tests {
         //Make the chain clean
         sc.j_couple = vec![[1.0, 1.0, 1.0]; sc.vars.hsize as usize];
         sc.static_h = vec![[0.0, 0.0, 0.0]; sc.vars.hsize as usize];
+        sc.vars.beta = 1000.0;
         for i in 0..3e6 as usize {
-            sc.metropolis_update(1000.0);
+            sc.metropolis_update();
         }
         //Expect energy to be approx -L - B l
         let lL: f64 = sc.vars.ssize as f64 / sc.vars.hsize as f64;
-        let e: f64 = sc.total_energy2(true);
-        println!("Exp: {}", -1.0);
+        let e: f64 = sc.total_energy2();
+        println!("Exp: {}", -1.0 - lL);
         println!("Actual: {}", e);
-        let ediff: f64 = (-1.0 - e).abs();
+        let ediff: f64 = (-1.0 - lL - e).abs();
         assert!(ediff < 0.01);
     }
 }
