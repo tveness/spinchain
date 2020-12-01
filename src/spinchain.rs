@@ -138,7 +138,7 @@ impl SpinChain {
         let index: usize = rng.gen_range(0, s) as usize;
         let local_field: [f64; 3] = match index {
             x if index < self.vars.ssize as usize => [
-                self.static_h[index][0] + 1.0,
+                self.static_h[index][0],// + 1.0,
                 self.static_h[index][1],
                 self.static_h[index][2],
             ],
@@ -164,18 +164,22 @@ impl SpinChain {
 
         let j_r: &[f64; 3] = &self.j_couple[index];
 
-        let ei: f64 = -Self::sjs_energy(s_l, s_c, j_l) - Self::sjs_energy(s_c, s_r, j_r)
-            + Self::sh_energy(s_c, &local_field);
+        let mut ei: f64 = 0.0;
+        for k in 0..3 {
+            ei -= s_l.dir[k]*j_l[k]*s_c.dir[k] + s_r.dir[k]*j_r[k]*s_c.dir[k] ; 
+            ei += s_c.dir[k]*local_field[k];
+        }
 
         // Select random angles
         let theta: f64 = 2.0 * PI * unif.sample(&mut rng);
-        let phi: f64 = (1.0 - unif.sample(&mut rng)).acos();
+        let phi: f64 = (1.0 - 2.0*unif.sample(&mut rng)).acos();
         let new_spin: Spin = Spin::new_from_angles(theta, phi);
 
-        let de: f64 = -Self::sjs_energy(s_l, &new_spin, j_l)
-            - Self::sjs_energy(&new_spin, s_r, j_r)
-            + Self::sh_energy(&new_spin, &local_field)
-            - ei;
+        let mut de: f64 = -ei;
+        for k in 0..3 {
+            de -= s_l.dir[k]*j_l[k]*new_spin.dir[k] + s_r.dir[k]*j_r[k]*new_spin.dir[k] ; 
+            de += new_spin.dir[k]*local_field[k];
+        }
 
         // Evaluate energy difference
 
@@ -229,7 +233,7 @@ impl SpinChain {
     pub fn total_energy2(&self) -> f64 {
         let mut e: f64 = 0.0;
 
-        let l: usize = self.vars.hsize as usize / 2;
+        let l: usize = self.vars.hsize as usize;
 
         let h_e: [f64; 3] = match self.vars.drive {
             true => self.h_ext(self.t),
@@ -246,26 +250,18 @@ impl SpinChain {
 
         for j in 0..l - 1 {
             for k in 0..3 {
-                e -= self.spins[2 * j + 1].xyz()[k]
-                    * self.j_couple[2 * j + 1][k]
-                    * self.spins[2 * j + 2].xyz()[k];
-            }
-        }
-
-        for j in 0..l {
-            for k in 0..3 {
-                e -= self.spins[2 * j].xyz()[k]
-                    * self.j_couple[2 * j][k]
-                    * self.spins[2 * j + 1].xyz()[k];
-                e += self.spins[2 * j].xyz()[k] * hfield[2 * j][k];
-                e += self.spins[2 * j + 1].xyz()[k] * hfield[2 * j + 1][k];
+                e -= self.spins[j].dir[k]
+                    * self.j_couple[j][k]
+                    * self.spins[j + 1].dir[k];
+                e += self.spins[j].dir[k] * hfield[j][k];
             }
         }
 
         for k in 0..3 {
-            e -= self.spins[2 * l - 1].xyz()[k]
-                * self.j_couple[2 * l - 1][k]
-                * self.spins[0].xyz()[k];
+            e -= self.spins[l - 1].dir[k]
+                * self.j_couple[l - 1][k]
+                * self.spins[0].dir[k];
+            e += self.spins[l-1].dir[k] * hfield[l-1][k];
         }
 
         e / (self.vars.hsize as f64)
@@ -599,15 +595,19 @@ mod tests {
         sc.j_couple = vec![[1.0, 1.0, 1.0]; sc.vars.hsize as usize];
         sc.static_h = vec![[0.0, 0.0, 0.0]; sc.vars.hsize as usize];
         sc.vars.beta = 1000.0;
-        for i in 0..3e6 as usize {
+        sc.vars.drive = false;
+
+        for i in 0..1e7 as usize {
             sc.metropolis_update();
         }
         //Expect energy to be approx -L - B l
         let lL: f64 = sc.vars.ssize as f64 / sc.vars.hsize as f64;
         let e: f64 = sc.total_energy2();
-        println!("Exp: {}", -1.0 - lL);
+//        println!("Exp: {}", -1.0 - lL);
+        println!("Exp: {}", -1.0);
         println!("Actual: {}", e);
-        let ediff: f64 = (-1.0 - lL - e).abs();
+//        let ediff: f64 = (-1.0 - lL - e).abs();
+        let ediff: f64 = (-1.0 - e).abs();
         assert!(ediff < 0.01);
     }
 }
