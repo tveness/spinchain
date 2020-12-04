@@ -1,3 +1,5 @@
+use std::f64::consts::PI;
+
 ///Struct for storing a 3-dimensional normalised spin
 #[derive(Debug, Clone)]
 pub struct Spin {
@@ -24,6 +26,69 @@ impl Spin {
         Spin {
             dir: [theta.cos() * phi.sin(), theta.sin() * phi.sin(), phi.cos()],
         }
+    }
+
+    pub fn gs(old: &[f64; 3], perp: &[f64; 3]) -> [f64; 3] {
+        let dot: f64 = perp[0] * old[0] + perp[1] * old[1] + perp[2] * old[2];
+        let on: f64 = old.iter().map(|x| x * x).sum::<f64>();
+        let sub: [f64; 3] = [
+            perp[0] - dot * old[0] / on,
+            perp[1] - dot * old[1] / on,
+            perp[2] - dot * old[2] / on,
+        ];
+        let s: f64 = sub.iter().map(|x| x * x).sum::<f64>().sqrt();
+
+        [sub[0] / s, sub[1] / s, sub[2] / s]
+    }
+
+    pub fn rot_perp(old: &[f64; 2], rot_dir: &[f64; 3], rot_angle: f64) -> [f64; 2] {
+        let mut old_spin = Spin::new_from_angles(old[0], old[1]);
+        //        let oo_spin = old_spin.clone();
+
+        // Get perp dir via Gram-Schmidt (i.e. just subtract off old-component
+        let perp_dir: [f64; 3] = Spin::gs(&old_spin.dir, rot_dir);
+
+        /*
+        println!(
+            "Norm of perp_dir: {}",
+            perp_dir[0] * perp_dir[0] + perp_dir[1] * perp_dir[1] + perp_dir[2] * perp_dir[2]
+        );
+        println!(
+            "Perp_dir*old_spin: {}",
+            perp_dir[0] * old_spin.dir[0]
+                + perp_dir[1] * old_spin.dir[1]
+                + perp_dir[2] * old_spin.dir[2]
+        );
+        */
+
+        old_spin.rotate(&perp_dir, -rot_angle);
+
+        /*
+        let ss: f64 = oo_spin.dir[0] * old_spin.dir[0]
+            + oo_spin.dir[1] * old_spin.dir[1]
+            + oo_spin.dir[2] * old_spin.dir[2];
+        println!(
+            "acos(s.s'): {}, rot_angle: {}, delta: {}",
+            ss.acos(),
+            rot_angle,
+            ss.acos() - rot_angle
+        );
+        */
+
+        // [theta, phi]
+        [old_spin.theta(), old_spin.phi()]
+    }
+
+    pub fn theta(&self) -> f64 {
+        (self.dir[1] / self.dir[0]).atan()
+            + match self.dir[0] {
+                x if x > 0.0 => 0.0,
+                _ => PI,
+            }
+    }
+
+    pub fn phi(&self) -> f64 {
+        self.dir[2].acos()
     }
 
     #[allow(dead_code)]

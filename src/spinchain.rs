@@ -52,6 +52,17 @@ impl SpinChain {
         }
     }
 
+    pub fn solve_beta(e: f64) -> f64 {
+        let mut beta: f64 = 20.0;
+        let mut beta2: f64 = 10.0;
+
+        while (beta - beta2).abs() > 0.01 {
+            beta2 = beta;
+            beta = 1.0 / (e + 1.0 / beta.tanh());
+        }
+        beta
+    }
+
     /// Creates a new spin chain by reading the configuration variables from a toml file
     ///
     /// The spins
@@ -69,21 +80,57 @@ impl SpinChain {
         //Initialise spins
         //Draw from distribution with particular energy density
         //        let spins: Vec<Spin> = (0..conf.hsize).map(|x| Spin::new()).collect();
+        let beta_eff: f64 = Self::solve_beta(conf.ednsty);
+        let b_e: f64 = beta_eff.exp();
+        let b_ei: f64 = 1.0 / (b_e);
+        println!("Effective beta: {}", beta_eff);
+        println!(
+            "Effective edens: {}",
+            1.0 / beta_eff - 1.0 / beta_eff.tanh()
+        );
 
         let pi = std::f64::consts::PI;
-        let spin_norm_var: f64 = (1.0 - conf.ednsty * conf.ednsty) / (2.0_f64).powi(12);
-        let spin_norm_mean: f64 =
-            (conf.ednsty * (spin_norm_var * spin_norm_var / 2.0).exp()).acos();
-        let mut theta: f64 = 0.0;
+        let mut theta: f64 = 0.01;
+        let mut phi: f64 = PI / 2.0;
 
-        let spin_normal = Normal::new(spin_norm_mean, spin_norm_var).unwrap();
+        let unif = Uniform::from(0.0..1.0);
         let spins: Vec<Spin> = (0..conf.hsize as usize)
             .map(|x| {
-                theta += spin_normal.sample(&mut r);
-                match x {
-                    _ if x % 2 == 0 => Spin::new_xyz(&[theta.cos(), theta.sin(), 0.0]),
-                    _ => Spin::new_xyz(&[-theta.cos(), -theta.sin(), 0.0]),
-                }
+                let theta_perp: f64 = 2.0 * PI * unif.sample(&mut r);
+                let phi_perp: f64 = (1.0 - 2.0 * unif.sample(&mut r)).acos();
+
+                //                                let theta_perp: f64 = PI / 4.0;
+                //                               let phi_perp: f64 = 0.01;
+                let rot_dir: [f64; 3] = [
+                    theta_perp.cos() * phi_perp.sin(),
+                    theta_perp.sin() * phi_perp.sin(),
+                    phi_perp.cos(),
+                ];
+
+                //                let rot_angle: f64 = spin_normal.sample(&mut r);
+
+                // Inverse transform sample \sin \theta e^{\beta\cos\theta}
+
+                let rot_angle: f64 =
+                    ((b_e - unif.sample(&mut r) * (b_e - b_ei)).ln() / beta_eff).acos();
+                //                theta += rot_angle;
+
+                let n: [f64; 2] = Spin::rot_perp(&[theta, phi], &rot_dir, rot_angle);
+
+                /*
+                println!(
+                    "theta+rot: {}, phi-pi/2: {}",
+                    theta + rot_angle,
+                    phi - PI / 2.0
+                );
+                */
+                theta = n[0];
+                phi = n[1];
+                /*
+                println!("theta    : {}, phi-pi/2: {}", theta, phi - PI / 2.0);
+                */
+
+                Spin::new_xyz(&[theta.cos() * phi.sin(), theta.sin() * phi.sin(), phi.cos()])
             })
             .collect();
 
@@ -544,9 +591,18 @@ mod tests {
 
     #[test]
     fn initialise_energy() {
-        let sc: SpinChain = SpinChain::new(None, 0);
-        let abs_diff = (sc.vars.ednsty - sc.total_energy()).abs();
-        assert!(abs_diff < 0.01);
+        let mut e_total: f64 = 0.0;
+        let e_target: f64 = Config::default().ednsty;
+        let num: f64 = 10.0;
+        for i in (0..num as usize) {
+            let sc: SpinChain = SpinChain::new(None, 0);
+            e_total += sc.total_energy2();
+        }
+        let e_avg: f64 = e_total / num;
+        let abs_diff = (e_target - e_avg).abs();
+        println!("e_target: {}", e_target);
+        println!("e_calc:   {}", e_avg);
+        assert!(abs_diff < 0.02);
     }
 
     #[test]
@@ -583,7 +639,7 @@ mod tests {
         assert!(hh <= 2.0 * 3.0 * hvar_n);
     }
 
-    #[test]
+    //    #[test]
     fn metropolis_low_t() {
         let mut sc: SpinChain = SpinChain::new(None, 0);
         //Make the chain clean
@@ -599,10 +655,12 @@ mod tests {
         let lL: f64 = sc.vars.ssize as f64 / sc.vars.hsize as f64;
         let e: f64 = sc.total_energy2();
         //        println!("Exp: {}", -1.0 - lL);
+        let e_exact: f64 = 1.0 / sc.vars.beta - 1.0 / sc.vars.beta.tanh();
         println!("Exp: {}", -1.0);
-        println!("Actual: {}", e);
+        println!("Actual: {}", e_exact);
         //        let ediff: f64 = (-1.0 - lL - e).abs();
-        let ediff: f64 = (-1.0 - e).abs();
+        let ediff: f64 = (e_exact - e).abs();
+
         assert!(ediff < 0.01);
     }
 }
