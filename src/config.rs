@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(default)]
 /// This stores a configuration for the classical spin chain
 pub struct Config {
@@ -62,7 +62,7 @@ impl Default for Config {
             strob: false,
             offset: 0,
             drive: true,
-            beta: 1.0,
+            beta: 2.88,
         }
     }
 }

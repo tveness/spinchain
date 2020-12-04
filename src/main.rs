@@ -26,9 +26,12 @@ fn main() {
 
     let num: usize = conf.runs as usize;
 
+    conf.beta = SpinChain::solve_beta(conf.ednsty);
+    println!("Energy density: {}", conf.ednsty);
+    println!("Effective temperature: {}", conf.beta);
+
     for i in 0..num {
-        let mut spin_chain: SpinChain =
-            SpinChain::new(Some("config.toml"), i + conf.offset as usize);
+        let mut spin_chain: SpinChain = SpinChain::new(conf.clone(), i + conf.offset as usize);
 
         // Initialise at a particular temperature, say T=1
 

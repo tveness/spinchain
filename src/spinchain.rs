@@ -68,26 +68,17 @@ impl SpinChain {
     /// The spins
     /// are then initialised in a random configuration at the correct energy density for the case
     /// of isotropic coupling and zero magnetic field
-    pub fn new(filename: Option<&str>, num: usize) -> SpinChain {
+    pub fn new(conf: Config, num: usize) -> SpinChain {
         //Read configuration file
         //Can make this refer to a default if error and then write a config file
         let mut r = rand::thread_rng();
-        let conf: Config = match filename {
-            Some(x) => Self::read_config(x),
-            None => Config::default(),
-        };
 
         //Initialise spins
         //Draw from distribution with particular energy density
         //        let spins: Vec<Spin> = (0..conf.hsize).map(|x| Spin::new()).collect();
-        let beta_eff: f64 = Self::solve_beta(conf.ednsty);
+        let beta_eff: f64 = conf.beta;
         let b_e: f64 = beta_eff.exp();
         let b_ei: f64 = 1.0 / (b_e);
-        println!("Effective beta: {}", beta_eff);
-        println!(
-            "Effective edens: {}",
-            1.0 / beta_eff - 1.0 / beta_eff.tanh()
-        );
 
         let pi = std::f64::consts::PI;
         let mut theta: f64 = 0.01;
@@ -594,8 +585,8 @@ mod tests {
         let mut e_total: f64 = 0.0;
         let e_target: f64 = Config::default().ednsty;
         let num: f64 = 10.0;
-        for i in (0..num as usize) {
-            let sc: SpinChain = SpinChain::new(None, 0);
+        for i in 0..num as usize {
+            let sc: SpinChain = SpinChain::new(Config::default(), 0);
             e_total += sc.total_energy2();
         }
         let e_avg: f64 = e_total / num;
@@ -607,7 +598,7 @@ mod tests {
 
     #[test]
     fn interactions_off() {
-        let mut sc: SpinChain = SpinChain::new(None, 0);
+        let mut sc: SpinChain = SpinChain::new(Config::default(), 0);
         //Turn off interactions
         sc.j_couple = vec![[0.0, 0.0, 0.0]; sc.j_couple.len()];
         //Point all spins along the x axis
@@ -627,7 +618,7 @@ mod tests {
 
     #[test]
     fn static_field_norma() {
-        let sc: SpinChain = SpinChain::new(None, 0);
+        let sc: SpinChain = SpinChain::new(Config::default(), 0);
         let hx: f64 = sc.static_h.iter().map(|x| x[0]).sum();
         let hy: f64 = sc.static_h.iter().map(|x| x[1]).sum();
         let hz: f64 = sc.static_h.iter().map(|x| x[2]).sum();
@@ -641,7 +632,7 @@ mod tests {
 
     //    #[test]
     fn metropolis_low_t() {
-        let mut sc: SpinChain = SpinChain::new(None, 0);
+        let mut sc: SpinChain = SpinChain::new(Config::default(), 0);
         //Make the chain clean
         sc.j_couple = vec![[1.0, 1.0, 1.0]; sc.vars.hsize as usize];
         sc.static_h = vec![[0.0, 0.0, 0.0]; sc.vars.hsize as usize];
@@ -652,7 +643,7 @@ mod tests {
             sc.metropolis_update();
         }
         //Expect energy to be approx -L - B l
-        let lL: f64 = sc.vars.ssize as f64 / sc.vars.hsize as f64;
+        //        let lL: f64 = sc.vars.ssize as f64 / sc.vars.hsize as f64;
         let e: f64 = sc.total_energy2();
         //        println!("Exp: {}", -1.0 - lL);
         let e_exact: f64 = 1.0 / sc.vars.beta - 1.0 / sc.vars.beta.tanh();
