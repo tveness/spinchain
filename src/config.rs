@@ -16,6 +16,8 @@ pub struct Config {
     pub runs: i32,
     ///trel
     pub trel: f64,
+    ///threads
+    pub threads: usize,
     ///relaxation time
     pub tau: f64,
     ///anisotropy parameter
@@ -50,6 +52,7 @@ impl Default for Config {
             t: 256.0,
             dt: 0.02,
             runs: 2,
+            threads: 2,
             trel: 0.0,
             tau: 10.0,
             lambda: 1.0,

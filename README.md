@@ -17,24 +17,33 @@ drawn from a separate normal distribution.
 # Configuration features
 
 In config.toml (if not present, default will be generated when running), there
-are the following parameters
+are the following parameters 
 ```
-hsize: is the size of the system
-ssize: size of subsystem (driven part)
-t: total time of simulation (in units of J)
-dt: time-step of numerical evolution
-runs: how many parallel runs to simulate
-trel: time offset (start at t=-trel)
-tau: period of driving
-lambda: anisotropy of J-coupling
-hfield: static field applied to all sites
-jvar: variance in J-coupling
-hvar: variance in static magnetic field
-method: method for Suzuki-Trotter
-ednsty: target energy density for chain initialisation
-file: logging filename e.g. "log" would send runs to "log0.dat", "log1.dat", ...
-strob: evaluate stroboscopically? true/false
-offset: for 0, start logging at file "log0.dat"
-drive: drive on/off (true/false)
-pub beta: inverse temperature for Monte Carlo
+hsize = 2000 # size of the system
+ssize = 20   # size of subsystem (driven part)
+t = 500.0    # final time of simulation
+dt = 0.02    # time-step for simulation
+runs = 2     # number runs to perform
+threads = 2  # number of parallel threads
+trel = 0.0   # minus initial time
+tau = 10.0   # period of drive
+lambda = 1.0 # value of J_z coupling
+hfield = [0.0, 0.0, 0.0] # constant h field
+jvar = 0.001 # variance in J couplings (x, y, z independent)
+hvar = 0.0   # variance in field
+method = 2   # method for numerical integration (2=2nd order Suzuki-Trotter)
+ednsty = -0.66 # energy-density of initial state
+file = "log"   # pattern for log files i.e. log0.dat, log1.dat
+strob = false  # stroboscopic evaluation
+offset = 0     # first file i.e. log0.dat
+drive = true   # drive enabled
+beta = 2.8889029604295944 # beta (determined from ednsty)
 ```
+
+# Running the program
+
+By default when run, the program will produce a set of time-evolved data from
+an initial state.
+
+It will log energy density of entire system, and then energy density for the
+subsystem, as well as subsystem magnetisations.

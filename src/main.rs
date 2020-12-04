@@ -1,5 +1,6 @@
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::fs;
+use threadpool::ThreadPool;
 mod config;
 use self::config::Config;
 
@@ -8,8 +9,6 @@ use self::spin::Spin;
 
 mod spinchain;
 use self::spinchain::SpinChain;
-
-use std::thread;
 
 fn main() {
     //Create spin chain with parameters in file "config.toml"
@@ -24,7 +23,9 @@ fn main() {
     //Want to read num from file
     let mut conf: Config = SpinChain::read_config("config.toml");
 
+    let threads = conf.threads;
     let num: usize = conf.runs as usize;
+    let pool = ThreadPool::new(threads);
 
     conf.beta = SpinChain::solve_beta(conf.ednsty);
     println!("Energy density: {}", conf.ednsty);
@@ -38,9 +39,9 @@ fn main() {
         let pb = m.add(ProgressBar::new(spin_chain.vars.t as u64));
         pb.set_style(sty.clone());
 
-        pb.set_message(&format!("Run {}", i));
+        pool.execute(move || {
+            pb.set_message(&format!("Run {}", i));
 
-        let _ = thread::spawn(move || {
             for _ in 0..2e7 as usize {
                 spin_chain.metropolis_update();
             }
@@ -50,11 +51,13 @@ fn main() {
                 spin_chain.log();
                 pb.set_position(spin_chain.t as u64);
             }
-            pb.finish_with_message("Done");
+            pb.finish_and_clear();
+            //            pb.finish_with_message(&format!("Done {}",i));
         });
     }
 
-    m.join_and_clear().unwrap();
+    //    m.join_and_clear().unwrap();
+    m.join().unwrap();
 
     //Update config
     conf.offset += num as u32;
