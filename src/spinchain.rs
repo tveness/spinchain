@@ -171,9 +171,10 @@ impl SpinChain {
         let mut rng = rand::thread_rng();
         let unif = Uniform::from(0.0..1.0);
 
-        // Select a spin
+        // Select a spin at random from the chain
         let s: usize = self.vars.hsize as usize;
         let index: usize = rng.gen_range(0, s) as usize;
+
         let local_field: [f64; 3] = match index {
             x if index < self.vars.ssize as usize => [
                 self.static_h[index][0], // + 1.0,
@@ -182,6 +183,7 @@ impl SpinChain {
             ],
             x => self.static_h[index],
         };
+        //        println!("Local field: {:?}", local_field);
         //Calculate initial energy
         //First get left and right spins and couplings
         let s_c: &Spin = &self.spins[index];
@@ -394,7 +396,21 @@ impl SpinChain {
         let spins = self.spins[..s].iter();
 
         //Now calculate magnetisation for this class of spins
-        let result: [f64; 3] = self.spins[..self.vars.ssize as usize]
+        let result: [f64; 3] = self.spins[..s as usize]
+            .iter()
+            .fold([0.0, 0.0, 0.0], |acc, x| {
+                [acc[0] + x.dir[0], acc[1] + x.dir[1], acc[2] + x.dir[2]]
+            });
+        result
+    }
+
+    pub fn m_tot(&self) -> [f64; 3] {
+        //Determine spins
+        let s: usize = self.vars.hsize as usize;
+        let spins = self.spins.iter();
+
+        //Now calculate magnetisation for this class of spins
+        let result: [f64; 3] = self.spins[..s as usize]
             .iter()
             .fold([0.0, 0.0, 0.0], |acc, x| {
                 [acc[0] + x.dir[0], acc[1] + x.dir[1], acc[2] + x.dir[2]]

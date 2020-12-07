@@ -42,6 +42,7 @@ pub struct Config {
     pub drive: bool,
     /// Inverse temperature for Monte Carlo
     pub beta: f64,
+    pub mc_points: usize,
 }
 
 impl Default for Config {
@@ -63,9 +64,10 @@ impl Default for Config {
             ednsty: -0.66,
             file: "log".to_string(),
             strob: false,
-            offset: 0,
             drive: true,
             beta: 2.88,
+            mc_points: 1000,
+            offset: 0,
         }
     }
 }
