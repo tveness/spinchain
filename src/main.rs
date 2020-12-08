@@ -1,6 +1,6 @@
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::fs;
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{prelude::*, BufReader};
 use threadpool::ThreadPool;
 mod config;
@@ -15,6 +15,122 @@ use self::spinchain::SpinChain;
 use clap::{App, Arg};
 
 use glob::glob;
+
+fn bin_and_write(data: &[f64], bins: usize, filename: &str) {
+    let min: f64 = data.iter().cloned().fold(1. / 0., f64::min);
+    let max: f64 = data.iter().cloned().fold(f64::NAN, f64::max);
+    //    println!("Max: {}", max);
+    //    println!("Min: {}", min);
+    let mut binned: Vec<f64> = vec![0.0; bins + 1];
+    for item in data.iter() {
+        let index = (bins as f64 * (item - min) / (max - min)).floor() as usize;
+        binned[index] += 1.0;
+    }
+
+    //Write data to file
+    let mc_file = File::create(filename).expect("Could not open file hist_mc.dat");
+    for (i, item) in binned.iter().enumerate() {
+        writeln!(
+            &mc_file,
+            "{} {}",
+            min + (i as f64) * (max - min) / (bins as f64),
+            item
+        )
+        .unwrap();
+    }
+}
+
+fn gen_hist(conf: &mut Config, sample_num: usize) {
+    conf.drive = false;
+    conf.file = "x".to_string();
+
+    let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+
+    let mut mc_data_mx: Vec<f64> = Vec::with_capacity(sample_num);
+    let mut mc_data_my: Vec<f64> = Vec::with_capacity(sample_num);
+    let mut mc_data_mz: Vec<f64> = Vec::with_capacity(sample_num);
+    let mut mc_data_e: Vec<f64> = Vec::with_capacity(sample_num);
+
+    println!("Generating Monte-Carlo histogram");
+    let pb = ProgressBar::new(sample_num as u64);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
+            )
+            .progress_chars("#>-"),
+    );
+
+    // First generate Monte-Carlo histogram
+    // Generate 1000 points, then bin them
+    for _i in 0..sample_num {
+        //Do Metropolis updates
+        for _ in 0..1e4 as usize {
+            sc.metropolis_update();
+        }
+
+        //Get a sample
+        let mx: f64 = sc.m()[0] / sc.vars.ssize as f64;
+        let my: f64 = sc.m()[1] / sc.vars.ssize as f64;
+        let mz: f64 = sc.m()[2] / sc.vars.ssize as f64;
+        let ed: f64 = sc.system_energy();
+
+        mc_data_mx.push(mx);
+        mc_data_my.push(my);
+        mc_data_mz.push(mz);
+        mc_data_e.push(ed);
+
+        pb.inc(1);
+    }
+    pb.finish_with_message("Done");
+    //Bin data
+    let bins: usize = 50;
+    bin_and_write(&mc_data_mx, bins, "hist_mc_mx.dat");
+    bin_and_write(&mc_data_my, bins, "hist_mc_my.dat");
+    bin_and_write(&mc_data_mz, bins, "hist_mc_mz.dat");
+    bin_and_write(&mc_data_e, bins, "hist_mc_e.dat");
+
+    // Now do time evolution from this last sample
+    let mut hist_data_mx: Vec<f64> = Vec::with_capacity(sample_num);
+    let mut hist_data_my: Vec<f64> = Vec::with_capacity(sample_num);
+    let mut hist_data_mz: Vec<f64> = Vec::with_capacity(sample_num);
+    let mut hist_data_e: Vec<f64> = Vec::with_capacity(sample_num);
+    let pb = ProgressBar::new(sample_num as u64);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
+            )
+            .progress_chars("#>-"),
+    );
+    println!("Generating dynamics histogram");
+
+    for _i in 0..sample_num {
+        //Do dynamical updates
+        for _ in 0..1e3 as usize {
+            sc.update();
+        }
+
+        //Get a sample
+        let mx: f64 = sc.m()[0] / sc.vars.ssize as f64;
+        let my: f64 = sc.m()[1] / sc.vars.ssize as f64;
+        let mz: f64 = sc.m()[2] / sc.vars.ssize as f64;
+        let ed: f64 = sc.system_energy();
+
+        hist_data_mx.push(mx);
+        hist_data_my.push(my);
+        hist_data_mz.push(mz);
+        hist_data_e.push(ed);
+
+        pb.inc(1);
+    }
+    pb.finish_with_message("Done");
+
+    bin_and_write(&hist_data_mx, bins, "hist_dyn_mx.dat");
+    bin_and_write(&hist_data_my, bins, "hist_dyn_my.dat");
+    bin_and_write(&hist_data_mz, bins, "hist_dyn_mz.dat");
+    bin_and_write(&hist_data_e, bins, "hist_dyn_e.dat");
+}
 
 fn run_sim(conf: &mut Config) {
     let m = MultiProgress::new();
@@ -146,8 +262,12 @@ fn average(conf: &mut Config) {
 }
 
 fn run_mc(conf: &mut Config) {
-    println!("Running Monte-Carlo simulation");
-    let file = File::create("mc.dat").unwrap();
+    let file_log = OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open("mc.dat")
+        .unwrap();
+    let file = File::create("mc_live.dat").unwrap();
 
     let points: usize = conf.mc_points as usize;
     // Gather 100 points
@@ -157,6 +277,8 @@ fn run_mc(conf: &mut Config) {
     let mut mz_vec: Vec<f64> = Vec::with_capacity(points);
 
     let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+    println!("Running Monte-Carlo simulation");
+    println!("beta: {}", sc.vars.beta);
 
     let pb = ProgressBar::new(points as u64);
     pb.set_style(
@@ -188,11 +310,20 @@ fn run_mc(conf: &mut Config) {
     }
     pb.finish_with_message("Done");
     println!("Average values");
-
-    println!("e: {}", e_vec.iter().sum::<f64>() / points as f64);
-    println!("mx: {}", mx_vec.iter().sum::<f64>() / points as f64);
-    println!("my: {}", my_vec.iter().sum::<f64>() / points as f64);
-    println!("mz: {}", mz_vec.iter().sum::<f64>() / points as f64);
+    let e_avg = e_vec.iter().sum::<f64>() / points as f64;
+    let mx_avg = mx_vec.iter().sum::<f64>() / points as f64;
+    let my_avg = my_vec.iter().sum::<f64>() / points as f64;
+    let mz_avg = mz_vec.iter().sum::<f64>() / points as f64;
+    writeln!(
+        &file_log,
+        "{} {} {} {} {}",
+        sc.vars.beta, e_avg, mx_avg, my_avg, mz_avg
+    )
+    .unwrap();
+    println!("e: {}", e_avg);
+    println!("mx: {}", mx_avg);
+    println!("my: {}", my_avg);
+    println!("mz: {}", mz_avg);
 }
 
 fn main() {
@@ -212,13 +343,48 @@ fn main() {
                 .help("Calculate average of runs"),
         )
         .arg(
+            Arg::with_name("beta")
+            .short("b")
+            .long("beta")
+            .value_name("BETA")
+            .takes_value(true)
+            .help("Overrides config beta")
+            )
+        .arg(
             Arg::with_name("mc")
                 .short("m")
                 .long("monte-carlo")
                 .help("Calculate an average quantitity in Monte-Carlo"),
         )
+        .arg(
+            Arg::with_name("hist")
+            .short("h")
+            .value_name("POINTS")
+            .long("histogram")
+            .takes_value(true)
+            .default_value("8000")
+            .help("Generate histograms via Monte-Carlo (hist_mc_mx.dat) and via time-evolution (hist_dyn_mx.dat)"),
+            )
         .get_matches();
     let mut default = true;
+
+    if let Some(b) = matches.value_of("beta") {
+        //        println!("Overriding to: {}", b);
+        conf.beta = b.parse::<f64>().unwrap();
+    }
+
+    let points: usize = match matches.value_of("hist") {
+        Some(x) => x.parse::<usize>().unwrap(),
+        None => 8000 as usize,
+    };
+
+    match matches.is_present("hist") {
+        true => {
+            default = false;
+            gen_hist(&mut conf, points);
+        }
+        false => (),
+    }
 
     match matches.is_present("avg") {
         true => {

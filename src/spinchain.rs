@@ -361,7 +361,7 @@ impl SpinChain {
     }
 
     ///Calculate the energy of just the system proper, ignore boundary terms
-    fn system_energy(&self) -> f64 {
+    pub fn system_energy(&self) -> f64 {
         //Size is ssize
         let s: usize = self.vars.ssize as usize;
 
