@@ -25,12 +25,13 @@ fn gen_hist(conf: &mut Config, sample_num: usize) {
     let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
 
     let mc_hist = OpenOptions::new()
-        .write(true)
+        .create(true)
         .append(true)
         .open("hist_mc.dat")
         .unwrap();
+
     let dyn_hist = OpenOptions::new()
-        .write(true)
+        .create(true)
         .append(true)
         .open("hist_dyn.dat")
         .unwrap();
@@ -343,6 +344,7 @@ fn main() {
 
     match matches.is_present("hist") {
         true => {
+            println!("Running hist");
             default = false;
             gen_hist(&mut conf, points);
         }
