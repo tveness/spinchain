@@ -51,7 +51,7 @@ subsystem, as well as subsystem magnetisations.
 # Histograms
 
 Comparing histograms for Monte Carlo and dynamical evolution to check that the system thermalises correctly.
-Plots here for energy density = -0.66, and B-field = [1.0,0.0,0.0]
+Plots here for beta = 2.89, and B-field = [1.0,0.0,0.0]
 
 ![Energy density](examples/hist_e.png)
 ![M_x density](examples/hist_mx.png)
