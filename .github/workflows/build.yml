@@ -34,5 +34,14 @@ jobs:
       
       - name: Build
         run: cargo build --release && strip target/release/sc && mv target/release/sc target/release/sc_x86_64_unknown_linux_gnu
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/release/sc_x86_64_unknown_linux_gnu
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
+
         
           
