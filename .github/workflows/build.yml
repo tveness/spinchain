@@ -37,6 +37,7 @@ jobs:
 
       - name: Release
         uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags')
         with:
           files: |
             target/release/sc_x86_64_unknown_linux_gnu
