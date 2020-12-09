@@ -47,3 +47,15 @@ an initial state.
 
 It will log energy density of entire system, and then energy density for the
 subsystem, as well as subsystem magnetisations.
+
+# Histograms
+
+Comparing histograms for Monte Carlo and dynamical evolution to check that the system thermalises correctly.
+Plots here for energy density = -0.66, and B-field = [1.0,0.0,0.0]
+
+![Energy density](examples/hist_e.png)
+![M_x density](examples/hist_mx.png)
+![M_y density](examples/hist_my.png)
+![M_z density](examples/hist_mz.png)
+
+

@@ -316,7 +316,7 @@ fn main() {
             .long("histogram")
             .takes_value(true)
             .default_value("8000")
-            .help("Generate histograms via Monte-Carlo (hist_mc_mx.dat) and via time-evolution (hist_dyn_mx.dat)"),
+            .help("Generate histograms via Monte-Carlo (hist_mc.dat) and via time-evolution (hist_dyn.dat)"),
             )
         .get_matches();
     let mut default = true;
