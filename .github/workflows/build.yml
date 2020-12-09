@@ -33,16 +33,16 @@ jobs:
           override: true
       
       - name: Build
-        run: cargo build --release && strip target/release/sc && mv target/release/sc target/release/sc_x86_64_unknown_linux_gnu
+        run: cargo build --all --release && strip target/release/sc && mv target/release/sc target/release/sc_x86_64-unknown-linux-gnu
 
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags')
         with:
           files: |
-            target/release/sc_x86_64_unknown_linux_gnu
+            target/release/sc_x86_64-unknown-linux-gnu
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN}}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
         
           
