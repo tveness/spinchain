@@ -13,6 +13,28 @@ where $J={\rm diag}(1,1,\lambda)$ plus noise on the diagonal drawn from a
 normal distribution, and the local magnetic field is a static field plus noise
 drawn from a separate normal distribution.
 
+## Usage 
+```
+spinchain 0.1
+Thomas Veness <thomas.veness@nottingham.ac.uk>
+Run classical spin chain simulation
+
+USAGE:
+    sc [FLAGS] [OPTIONS]
+
+FLAGS:
+    -a, --avg            Calculate average of runs
+        --help           Prints help information
+    -m, --monte-carlo    Calculate an average quantitity in Monte-Carlo
+    -V, --version        Prints version information
+
+OPTIONS:
+    -b, --beta <BETA>           Overrides config beta
+    -h, --histogram <POINTS>    Generate histograms via Monte-Carlo (hist_mc_mx.dat) and via time-evolution
+                                (hist_dyn_mx.dat) [default: 8000]
+```
+
+
 
 # Configuration features
 
@@ -57,5 +79,6 @@ Plots here for beta = 2.89, and B-field = [1.0,0.0,0.0]
 ![M_x density](examples/hist_mx.png)
 ![M_y density](examples/hist_my.png)
 ![M_z density](examples/hist_mz.png)
+
 
 
