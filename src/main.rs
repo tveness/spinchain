@@ -16,40 +16,16 @@ use clap::{App, Arg};
 
 use glob::glob;
 
-fn bin_and_write(data: &[f64], bins: usize, filename: &str) {
-    let min: f64 = data.iter().cloned().fold(1. / 0., f64::min);
-    let max: f64 = data.iter().cloned().fold(f64::NAN, f64::max);
-    //    println!("Max: {}", max);
-    //    println!("Min: {}", min);
-    let mut binned: Vec<f64> = vec![0.0; bins + 1];
-    for item in data.iter() {
-        let index = (bins as f64 * (item - min) / (max - min)).floor() as usize;
-        binned[index] += 1.0;
-    }
-
-    //Write data to file
-    let mc_file = File::create(filename).expect("Could not open file hist_mc.dat");
-    for (i, item) in binned.iter().enumerate() {
-        writeln!(
-            &mc_file,
-            "{} {}",
-            min + (i as f64) * (max - min) / (bins as f64),
-            item
-        )
-        .unwrap();
-    }
-}
-
+///Generate ```sample_num``` samples via Monte Carlo and dynamical evolution to check that the
+///system indeed thermalises via time-evolution
 fn gen_hist(conf: &mut Config, sample_num: usize) {
     conf.drive = false;
     conf.file = "x".to_string();
 
     let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
 
-    let mut mc_data_mx: Vec<f64> = Vec::with_capacity(sample_num);
-    let mut mc_data_my: Vec<f64> = Vec::with_capacity(sample_num);
-    let mut mc_data_mz: Vec<f64> = Vec::with_capacity(sample_num);
-    let mut mc_data_e: Vec<f64> = Vec::with_capacity(sample_num);
+    let mc_hist = File::create("hist_mc.dat").expect("Could not open file hist_mc.dat");
+    let dyn_hist = File::create("hist_dyn.dat").expect("Could not open file hist_mc.dat");
 
     println!("Generating Monte-Carlo histogram");
     let pb = ProgressBar::new(sample_num as u64);
@@ -63,7 +39,7 @@ fn gen_hist(conf: &mut Config, sample_num: usize) {
 
     // First generate Monte-Carlo histogram
     // Generate 1000 points, then bin them
-    for _i in 0..sample_num {
+    for i in 0..sample_num {
         //Do Metropolis updates
         for _ in 0..1e4 as usize {
             sc.metropolis_update();
@@ -75,26 +51,11 @@ fn gen_hist(conf: &mut Config, sample_num: usize) {
         let mz: f64 = sc.m()[2] / sc.vars.ssize as f64;
         let ed: f64 = sc.system_energy();
 
-        mc_data_mx.push(mx);
-        mc_data_my.push(my);
-        mc_data_mz.push(mz);
-        mc_data_e.push(ed);
+        writeln!(&mc_hist, "{} {} {} {} {}", i, mx, my, mz, ed).unwrap();
 
         pb.inc(1);
     }
     pb.finish_with_message("Done");
-    //Bin data
-    let bins: usize = 50;
-    bin_and_write(&mc_data_mx, bins, "hist_mc_mx.dat");
-    bin_and_write(&mc_data_my, bins, "hist_mc_my.dat");
-    bin_and_write(&mc_data_mz, bins, "hist_mc_mz.dat");
-    bin_and_write(&mc_data_e, bins, "hist_mc_e.dat");
-
-    // Now do time evolution from this last sample
-    let mut hist_data_mx: Vec<f64> = Vec::with_capacity(sample_num);
-    let mut hist_data_my: Vec<f64> = Vec::with_capacity(sample_num);
-    let mut hist_data_mz: Vec<f64> = Vec::with_capacity(sample_num);
-    let mut hist_data_e: Vec<f64> = Vec::with_capacity(sample_num);
     let pb = ProgressBar::new(sample_num as u64);
     pb.set_style(
         ProgressStyle::default_bar()
@@ -105,7 +66,7 @@ fn gen_hist(conf: &mut Config, sample_num: usize) {
     );
     println!("Generating dynamics histogram");
 
-    for _i in 0..sample_num {
+    for i in 0..sample_num {
         //Do dynamical updates
         for _ in 0..1e3 as usize {
             sc.update();
@@ -117,19 +78,11 @@ fn gen_hist(conf: &mut Config, sample_num: usize) {
         let mz: f64 = sc.m()[2] / sc.vars.ssize as f64;
         let ed: f64 = sc.system_energy();
 
-        hist_data_mx.push(mx);
-        hist_data_my.push(my);
-        hist_data_mz.push(mz);
-        hist_data_e.push(ed);
+        writeln!(&dyn_hist, "{} {} {} {} {}", i, mx, my, mz, ed).unwrap();
 
         pb.inc(1);
     }
     pb.finish_with_message("Done");
-
-    bin_and_write(&hist_data_mx, bins, "hist_dyn_mx.dat");
-    bin_and_write(&hist_data_my, bins, "hist_dyn_my.dat");
-    bin_and_write(&hist_data_mz, bins, "hist_dyn_mz.dat");
-    bin_and_write(&hist_data_e, bins, "hist_dyn_e.dat");
 }
 
 fn run_sim(conf: &mut Config) {
