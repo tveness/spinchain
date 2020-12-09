@@ -141,12 +141,17 @@ impl SpinChain {
         //Initialise static h
         let h_normal = Normal::new(0.0, conf.hvar).unwrap();
         let static_h: Vec<[f64; 3]> = (0..conf.hsize)
-            .map(|x| {
-                [
+            .map(|x| match x {
+                _ if x < conf.ssize => [
+                    conf.hfield[0] + conf.hs[0] + h_normal.sample(&mut r),
+                    conf.hfield[1] + conf.hs[1] + h_normal.sample(&mut r),
+                    conf.hfield[2] + conf.hs[2] + h_normal.sample(&mut r),
+                ],
+                _ => [
                     conf.hfield[0] + h_normal.sample(&mut r),
                     conf.hfield[1] + h_normal.sample(&mut r),
                     conf.hfield[2] + h_normal.sample(&mut r),
-                ]
+                ],
             })
             .collect();
         let conf_file_name: &str =
@@ -175,14 +180,8 @@ impl SpinChain {
         let s: usize = self.vars.hsize as usize;
         let index: usize = rng.gen_range(0, s) as usize;
 
-        let local_field: [f64; 3] = match index {
-            x if index < self.vars.ssize as usize => [
-                self.static_h[index][0], // + 1.0,
-                self.static_h[index][1],
-                self.static_h[index][2],
-            ],
-            x => self.static_h[index],
-        };
+        let local_field: [f64; 3] = self.static_h[index];
+
         //        println!("Local field: {:?}", local_field);
         //Calculate initial energy
         //First get left and right spins and couplings

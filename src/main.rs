@@ -258,18 +258,19 @@ fn run_mc(conf: &mut Config) {
             sc.metropolis_update();
         }
 
-        let m: [f64; 3] = sc.m_tot();
+        let m: [f64; 3] = sc.m();
         let ms: [f64; 3] = [
-            m[0] / sc.vars.hsize as f64,
-            m[1] / sc.vars.hsize as f64,
-            m[2] / sc.vars.hsize as f64,
+            m[0] / sc.vars.ssize as f64,
+            m[1] / sc.vars.ssize as f64,
+            m[2] / sc.vars.ssize as f64,
         ];
         let e: f64 = sc.total_energy2();
+        let es: f64 = sc.system_energy();
         e_vec.push(e);
         mx_vec.push(ms[0]);
         my_vec.push(ms[1]);
         mz_vec.push(ms[2]);
-        writeln!(&file, "{} {} {} {} {}", i, e, ms[0], ms[1], ms[2]).unwrap();
+        writeln!(&file, "{} {} {} {} {} {}", i, e, es, ms[0], ms[1], ms[2]).unwrap();
         pb.inc(1);
     }
     pb.finish_with_message("Done");

@@ -24,6 +24,7 @@ pub struct Config {
     pub lambda: f64,
     ///static magnetic field [x,y,z]
     pub hfield: Vec<f64>,
+    pub hs: Vec<f64>,
     ///variance in spin-spin coupling
     pub jvar: f64,
     ///variance in magnetic field around hfield
@@ -58,6 +59,7 @@ impl Default for Config {
             tau: 10.0,
             lambda: 1.0,
             hfield: [0.0, 0.0, 0.0].to_vec(),
+            hs: [0.0, 0.0, 0.0].to_vec(),
             jvar: 0.001,
             hvar: 0.0,
             method: 2,
