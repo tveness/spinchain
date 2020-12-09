@@ -35,8 +35,8 @@ fn gen_hist(conf: &mut Config, sample_num: usize) {
         .append(true)
         .open("hist_dyn.dat")
         .unwrap();
-//    let mc_hist = File::create("hist_mc.dat").expect("Could not open file hist_mc.dat");
-//    let dyn_hist = File::create("hist_dyn.dat").expect("Could not open file hist_mc.dat");
+    //    let mc_hist = File::create("hist_mc.dat").expect("Could not open file hist_mc.dat");
+    //    let dyn_hist = File::create("hist_dyn.dat").expect("Could not open file hist_mc.dat");
 
     println!("Generating Monte-Carlo histogram");
     let pb = ProgressBar::new(sample_num as u64);
@@ -227,7 +227,7 @@ fn average(conf: &mut Config) {
 
 fn run_mc(conf: &mut Config) {
     let file_log = OpenOptions::new()
-        .write(true)
+        .create(true)
         .append(true)
         .open("mc.dat")
         .unwrap();
@@ -342,13 +342,13 @@ fn main() {
         None => 8000 as usize,
     };
 
-    match matches.is_present("hist") {
-        true => {
+    match matches.occurrences_of("hist") {
+        0 => (),
+        _ => {
             println!("Running hist");
             default = false;
             gen_hist(&mut conf, points);
         }
-        false => (),
     }
 
     match matches.is_present("avg") {
