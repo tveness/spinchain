@@ -182,7 +182,6 @@ impl SpinChain {
 
         let local_field: [f64; 3] = self.static_h[index];
 
-        //        println!("Local field: {:?}", local_field);
         //Calculate initial energy
         //First get left and right spins and couplings
         let s_c: &Spin = &self.spins[index];
@@ -233,16 +232,18 @@ impl SpinChain {
         let es: f64 = self.total_energy2();
         //        let de: f64 = self.de();
         let m: [f64; 3] = self.m();
+        let mt: [f64; 3] = self.m_tot();
         let s: f64 = self.vars.ssize as f64;
         writeln!(
             &self.file,
-            "{} {} {} {} {} {}",
+            "{} {} {} {} {} {} {}",
             self.t,
             es,
             e,
             m[0] / s,
             m[1] / s,
-            m[2] / s
+            m[2] / s,
+            mt[2] / self.vars.hsize as f64
         )
         .unwrap();
     }

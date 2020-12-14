@@ -8,6 +8,7 @@ use self::config::Config;
 
 mod spin;
 use self::spin::Spin;
+use std::f64::consts::PI;
 
 mod spinchain;
 use self::spinchain::SpinChain;
@@ -108,7 +109,6 @@ fn run_sim(conf: &mut Config) {
     let num: usize = conf.runs as usize;
     let pool = ThreadPool::new(threads);
 
-    conf.beta = SpinChain::solve_beta(conf.ednsty);
     println!("Energy density: {}", conf.ednsty);
     println!("Effective temperature: {}", conf.beta);
 
@@ -213,13 +213,14 @@ fn average(conf: &mut Config) {
     for (i, item) in avg_data.iter().enumerate() {
         writeln!(
             &ofile,
-            "{} {} {} {} {} {}",
+            "{} {} {} {} {} {} {}",
             item[0] / avg_nums[i],
             item[1] / avg_nums[i],
             item[2] / avg_nums[i],
             item[3] / avg_nums[i],
             item[4] / avg_nums[i],
-            item[5] / avg_nums[i]
+            item[5] / avg_nums[i],
+            item[6] / avg_nums[i]
         )
         .unwrap();
     }
@@ -236,9 +237,13 @@ fn run_mc(conf: &mut Config) {
     let points: usize = conf.mc_points as usize;
     // Gather 100 points
     let mut e_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut es_vec: Vec<f64> = Vec::with_capacity(points);
     let mut mx_vec: Vec<f64> = Vec::with_capacity(points);
     let mut my_vec: Vec<f64> = Vec::with_capacity(points);
     let mut mz_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut mxt_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut myt_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut mzt_vec: Vec<f64> = Vec::with_capacity(points);
 
     let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
     println!("Running Monte-Carlo simulation");
@@ -259,26 +264,40 @@ fn run_mc(conf: &mut Config) {
         }
 
         let m: [f64; 3] = sc.m();
+        let mt: [f64; 3] = sc.m_tot();
         let ms: [f64; 3] = [
             m[0] / sc.vars.ssize as f64,
             m[1] / sc.vars.ssize as f64,
             m[2] / sc.vars.ssize as f64,
         ];
+        let mst: [f64; 3] = [
+            mt[0] / sc.vars.hsize as f64,
+            mt[1] / sc.vars.hsize as f64,
+            mt[2] / sc.vars.hsize as f64,
+        ];
         let e: f64 = sc.total_energy2();
         let es: f64 = sc.system_energy();
         e_vec.push(e);
+        es_vec.push(es);
         mx_vec.push(ms[0]);
         my_vec.push(ms[1]);
         mz_vec.push(ms[2]);
+        mxt_vec.push(mst[0]);
+        myt_vec.push(mst[1]);
+        mzt_vec.push(mst[2]);
         writeln!(&file, "{} {} {} {} {} {}", i, e, es, ms[0], ms[1], ms[2]).unwrap();
         pb.inc(1);
     }
     pb.finish_with_message("Done");
     println!("Average values");
     let e_avg = e_vec.iter().sum::<f64>() / points as f64;
+    let es_avg = es_vec.iter().sum::<f64>() / points as f64;
     let mx_avg = mx_vec.iter().sum::<f64>() / points as f64;
     let my_avg = my_vec.iter().sum::<f64>() / points as f64;
     let mz_avg = mz_vec.iter().sum::<f64>() / points as f64;
+    let mxt_avg = mxt_vec.iter().sum::<f64>() / points as f64;
+    let myt_avg = myt_vec.iter().sum::<f64>() / points as f64;
+    let mzt_avg = mzt_vec.iter().sum::<f64>() / points as f64;
     writeln!(
         &file_log,
         "{} {} {} {} {}",
@@ -286,9 +305,12 @@ fn run_mc(conf: &mut Config) {
     )
     .unwrap();
     println!("e: {}", e_avg);
+    println!("es: {}", es_avg);
     println!("mx: {}", mx_avg);
     println!("my: {}", my_avg);
     println!("mz: {}", mz_avg);
+    println!("e-omega mz: {}", e_avg-2.0*PI/(sc.vars.tau) * mzt_avg);
+    println!("es-omega mz: {}", es_avg-2.0*PI/(sc.vars.tau) * mz_avg);
 }
 
 fn main() {
@@ -336,6 +358,9 @@ fn main() {
     if let Some(b) = matches.value_of("beta") {
         //        println!("Overriding to: {}", b);
         conf.beta = b.parse::<f64>().unwrap();
+    }
+    else {
+        conf.beta = SpinChain::solve_beta(conf.ednsty);
     }
 
     let points: usize = match matches.value_of("hist") {
