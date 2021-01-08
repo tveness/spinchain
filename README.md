@@ -2,6 +2,19 @@
 
 ![Build](https://github.com/tveness/spinchain/workflows/build-test/badge.svg)
 
+
+## How to build rust project
+
+1. Clone the repository
+2. Ensure the rust toolchain is installed, see https://rustup.rs/
+3. Run `cargo build --release` to compile a fast version of the code, it may
+   take a couple of minutes
+4. The binary is now located at target/release/sc
+5. `sc --help` will product the help dialogue
+6. `sc` will run a simple chain, and write the default configuration to `config.toml`
+
+
+
 Classical spin-chain simulation for project investigating periodic driving of a
 spin chain coupled to a bath.
 

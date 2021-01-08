@@ -126,11 +126,15 @@ fn run_sim(conf: &mut Config) {
             for _ in 0..2e7 as usize {
                 spin_chain.metropolis_update();
             }
+            let tau_steps: u64 = (spin_chain.vars.tau / spin_chain.vars.dt) as u64;
+
             spin_chain.log();
+
             while spin_chain.t < spin_chain.vars.t {
                 spin_chain.update();
+
                 if spin_chain.vars.strob {
-                    if spin_chain.t.fract() < spin_chain.vars.dt / 2.0 {
+                    if  ((spin_chain.t/spin_chain.vars.dt) as u64).rem_euclid(tau_steps) == 0 {
                         spin_chain.log();
                     }
                 } else {

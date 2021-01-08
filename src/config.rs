@@ -24,6 +24,7 @@ pub struct Config {
     pub lambda: f64,
     ///static magnetic field [x,y,z]
     pub hfield: Vec<f64>,
+    ///static magnetic field on subsystem [x,y,z]
     pub hs: Vec<f64>,
     ///variance in spin-spin coupling
     pub jvar: f64,
