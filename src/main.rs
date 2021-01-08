@@ -129,7 +129,14 @@ fn run_sim(conf: &mut Config) {
             spin_chain.log();
             while spin_chain.t < spin_chain.vars.t {
                 spin_chain.update();
-                spin_chain.log();
+                if spin_chain.vars.strob {
+                    if spin_chain.t.fract() < spin_chain.vars.dt / 2.0 {
+                        spin_chain.log();
+                    }
+                } else {
+                    spin_chain.log();
+                }
+
                 if spin_chain.t.fract() < spin_chain.vars.dt {
                     pb.set_position(spin_chain.t as u64);
                 }
@@ -309,8 +316,11 @@ fn run_mc(conf: &mut Config) {
     println!("mx: {}", mx_avg);
     println!("my: {}", my_avg);
     println!("mz: {}", mz_avg);
-    println!("e-omega mz: {}", e_avg-2.0*PI/(sc.vars.tau) * mzt_avg);
-    println!("es-omega mz: {}", es_avg-2.0*PI/(sc.vars.tau) * mz_avg);
+    println!("e-omega mz: {}", e_avg - 2.0 * PI / (sc.vars.tau) * mzt_avg);
+    println!(
+        "es-omega mz: {}",
+        es_avg - 2.0 * PI / (sc.vars.tau) * mz_avg
+    );
 }
 
 fn main() {
@@ -358,8 +368,7 @@ fn main() {
     if let Some(b) = matches.value_of("beta") {
         //        println!("Overriding to: {}", b);
         conf.beta = b.parse::<f64>().unwrap();
-    }
-    else {
+    } else {
         conf.beta = SpinChain::solve_beta(conf.ednsty);
     }
 
