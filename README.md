@@ -94,4 +94,8 @@ Plots here for beta = 2.89, and B-field = [1.0,0.0,0.0]
 ![M_z density](examples/hist_mz.png)
 
 
+# To do
+
+Write Monte Carlo for first order Magnus expansion result
+
 

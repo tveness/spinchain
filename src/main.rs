@@ -17,6 +17,64 @@ use clap::{App, Arg};
 
 use glob::glob;
 
+///Generate ```sample_num``` samples via Monte Carlo using first-order Magnus expansion system
+///indeed thermalises via time-evolution
+fn gen_hist_magnus(conf: &mut Config, sample_num: usize) {
+    conf.drive = false;
+    conf.file = "x".to_string();
+    let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+
+    let mc_hist = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("hist_mc_magnus.dat")
+        .unwrap();
+
+    println!("Generating Monte-Carlo histogram");
+
+    let pb = ProgressBar::new(sample_num as u64);
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
+            )
+            .progress_chars("#>-"),
+    );
+    let mut mx_avg: f64 = 0.0;
+    let mut my_avg: f64 = 0.0;
+    let mut mz_avg: f64 = 0.0;
+    let mut ed_avg: f64 = 0.0;
+
+    // First generate Monte-Carlo histogram
+    // Generate 1000 points, then bin them
+    for i in 0..sample_num {
+        //Do Metropolis updates
+        for _ in 0..1e4 as usize {
+            sc.metropolis_update_magnus();
+        }
+
+        //Get a sample
+        let mx: f64 = sc.m()[0] / sc.vars.ssize as f64;
+        let my: f64 = sc.m()[1] / sc.vars.ssize as f64;
+        let mz: f64 = sc.m()[2] / sc.vars.ssize as f64;
+        let ed: f64 = sc.system_energy();
+        mx_avg += mx;
+        my_avg += my;
+        mz_avg += mz;
+        ed_avg += ed;
+
+        writeln!(&mc_hist, "{} {} {} {} {}", i, mx, my, mz, ed).unwrap();
+
+        pb.inc(1);
+    }
+
+    pb.finish_with_message("Done");
+    println!("mx: {}", mx_avg / sample_num as f64);
+    println!("my: {}", my_avg / sample_num as f64);
+    println!("mz: {}", mz_avg / sample_num as f64);
+    println!("ed: {}", ed_avg / sample_num as f64);
+}
+
 ///Generate ```sample_num``` samples via Monte Carlo and dynamical evolution to check that the
 ///system indeed thermalises via time-evolution
 fn gen_hist(conf: &mut Config, sample_num: usize) {
@@ -134,7 +192,7 @@ fn run_sim(conf: &mut Config) {
                 spin_chain.update();
 
                 if spin_chain.vars.strob {
-                    if  ((spin_chain.t/spin_chain.vars.dt) as u64).rem_euclid(tau_steps) == 0 {
+                    if ((spin_chain.t / spin_chain.vars.dt) as u64).rem_euclid(tau_steps) == 0 {
                         spin_chain.log();
                     }
                 } else {
@@ -366,6 +424,14 @@ fn main() {
             .default_value("8000")
             .help("Generate histograms via Monte-Carlo (hist_mc.dat) and via time-evolution (hist_dyn.dat)"),
             )
+        .arg(
+            Arg::with_name("magnus-hist")
+            .value_name("POINTS")
+            .long("magnus-hist")
+            .takes_value(true)
+            .default_value("8000")
+            .help("Generate histogram via Monte-Carlo (hist_mc_magnus.dat) for first-order Magnus expansion, and print averages"),
+            )
         .get_matches();
     let mut default = true;
 
@@ -380,6 +446,15 @@ fn main() {
         Some(x) => x.parse::<usize>().unwrap(),
         None => 8000 as usize,
     };
+
+    match matches.occurrences_of("magnus-hist") {
+        0 => (),
+        _ => {
+            println!("Running Monte-Carlo for first-order Magnus expansion");
+            default = false;
+            gen_hist_magnus(&mut conf, points);
+        }
+    }
 
     match matches.occurrences_of("hist") {
         0 => (),

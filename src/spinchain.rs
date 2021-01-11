@@ -171,6 +171,7 @@ impl SpinChain {
             file,
         }
     }
+
     /// Does a Metropolis update for a single spin with inverse temperature beta
     pub fn metropolis_update(&mut self) {
         let mut rng = rand::thread_rng();
@@ -227,6 +228,150 @@ impl SpinChain {
             self.spins[index].dir = new_spin.dir;
         }
     }
+
+    //Could possibly do this with a function pointer for the energy, instead?
+    //For now, just get it working
+    //This calculates the first correction of the Magnus expansion for a monochromatic drive with
+    //period omega=2*pi/tau
+    //The first term is obviously the time-average i.e. only time-independent terms
+    //
+    //The next term is
+    //
+    //-1/(2 omega) * \sum_{j=1}^\ell S^z_j 2 * y .
+
+    pub fn metropolis_update_magnus(&mut self) {
+        let mut rng = rand::thread_rng();
+        let unif = Uniform::from(0.0..1.0);
+
+        // Select a spin at random from the chain
+        let s: usize = self.vars.hsize as usize;
+        let index: usize = rng.gen_range(0, s) as usize;
+
+        let local_field: [f64; 3] = self.static_h[index];
+
+        //Calculate initial energy
+        //First get left and right spins and couplings
+        let s_j: &Spin = &self.spins[index];
+
+        let s_jm1: &Spin = match index {
+            _ if index == 0 => &self.spins[s - 1],
+            _ => &self.spins[index - 1],
+        };
+
+        let s_jp1: &Spin = match index {
+            _ if index == s - 1 => &self.spins[0],
+            _ => &self.spins[index + 1],
+        };
+
+        let s_jp2: &Spin = match index {
+            _ if index == s - 2 => &self.spins[0],
+            _ if index == s - 1 => &self.spins[1],
+            _ => &self.spins[index + 2],
+        };
+        let s_jm2: &Spin = match index {
+            _ if index == 0 => &self.spins[s - 2],
+            _ if index == 1 => &self.spins[s - 1],
+            _ => &self.spins[index - 2],
+        };
+
+        let j_jm1: &[f64; 3] = match index {
+            _ if index == 0 => &self.j_couple[s - 1],
+            _ => &self.j_couple[index - 1],
+        };
+
+        let j_jp1: &[f64; 3] = match index {
+            _ if index == s - 1 => &self.j_couple[0],
+            _ => &self.j_couple[index + 1],
+        };
+        let j_jm2: &[f64; 3] = match index {
+            _ if index == 0 => &self.j_couple[s - 2],
+            _ if index == 1 => &self.j_couple[s - 1],
+            _ => &self.j_couple[index - 2],
+        };
+
+        let j_j: &[f64; 3] = &self.j_couple[index];
+
+        //Calculate energy before randomising a spin
+        let mut ei: f64 = 0.0;
+        for k in 0..3 {
+            // S J S terms, i.e. \Omega_1
+            // Because j->j+1, flipping j effects *two* terms in the energy
+            ei -= s_jm1.dir[k] * j_jm1[k] * s_j.dir[k] + s_j.dir[k] * s_jp1.dir[k] * j_j[k];
+        }
+
+        //-(1)/(2 \omega) (  S^z + 2y . (J_j S_{j+1} + J_{j-1} S_{j-1}) x S_j )
+        // Because j-1->j->j+1, flipping j effects *three* terms in the energy
+        // But only if the field is non-zero at site j
+        if index < self.vars.ssize as usize {
+            ei -= PI / self.vars.tau
+                * (s_j.dir[2]
+                    + 2.0
+                        * ((j_j[2] * s_jp1.dir[2] + j_jm1[2] * s_jm1.dir[2]) * s_j.dir[0]
+                            - (j_j[0] * s_jp1.dir[0] + j_jm1[0] * s_jm1.dir[0]) * s_j.dir[2]
+                            + match index {
+                                _ if index == 0 => 0.0,
+                                _ => {
+                                    (j_jm1[2] * s_j.dir[2] + j_jm2[2] * s_jm2.dir[2]) * s_jm1.dir[0]
+                                        - (j_jm1[0] * s_j.dir[0] + j_jm2[0] * s_jm2.dir[0])
+                                            * s_jm1.dir[2]
+                                }
+                            }
+                            + match index {
+                                _ if index == (self.vars.ssize - 1) as usize => 0.0,
+                                _ => {
+                                    (j_jp1[2] * s_jp2.dir[2] + j_j[2] * s_j.dir[2]) * s_jp1.dir[0]
+                                        - (j_jp1[0] * s_jp2.dir[0] + j_j[0] * s_j.dir[0])
+                                            * s_jp1.dir[2]
+                                }
+                            }));
+        }
+
+        // Select random angles
+        let theta: f64 = 2.0 * PI * unif.sample(&mut rng);
+        let phi: f64 = (1.0 - 2.0 * unif.sample(&mut rng)).acos();
+        let new_spin: Spin = Spin::new_from_angles(theta, phi);
+
+        //Calculate difference in energy with randomised spin
+        let mut de: f64 = -ei;
+        for k in 0..3 {
+            de -=
+                s_jm1.dir[k] * j_jm1[k] * s_j.dir[k] + s_j.dir[k] * s_jp1.dir[k] * new_spin.dir[k];
+        }
+
+        if index < self.vars.ssize as usize {
+            de -= PI / self.vars.tau
+                * (s_j.dir[2]
+                    + 2.0
+                        * ((j_j[2] * s_jp1.dir[2] + j_jm1[2] * s_jm1.dir[2]) * new_spin.dir[0]
+                            - (j_j[0] * s_jp1.dir[0] + j_jm1[0] * s_jm1.dir[0]) * new_spin.dir[2]
+                            + match index {
+                                _ if index == 0 => 0.0,
+                                _ => {
+                                    (j_jm1[2] * new_spin.dir[2] + j_jm2[2] * s_jm2.dir[2])
+                                        * s_jm1.dir[0]
+                                        - (j_jm1[0] * new_spin.dir[0] + j_jm2[0] * s_jm2.dir[0])
+                                            * s_jm1.dir[2]
+                                }
+                            }
+                            + match index {
+                                _ if index == (self.vars.ssize - 1) as usize => 0.0,
+                                _ => {
+                                    (j_jp1[2] * s_jp2.dir[2] + j_j[2] * new_spin.dir[2])
+                                        * s_jp1.dir[0]
+                                        - (j_jp1[0] * s_jp2.dir[0] + j_j[0] * new_spin.dir[0])
+                                            * s_jp1.dir[2]
+                                }
+                            }));
+        }
+        // Evaluate energy difference
+
+        // Accept/reject
+        // Accept if <0, or w/ prob e^{-\beta \Delta E} otherwise
+        if de < 0.0 || unif.sample(&mut rng) < (-self.vars.beta * de).exp() {
+            self.spins[index].dir = new_spin.dir;
+        }
+    }
+
     pub fn log(&self) {
         let e: f64 = self.system_energy();
         let es: f64 = self.total_energy2();
