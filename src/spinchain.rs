@@ -296,7 +296,7 @@ impl SpinChain {
         for k in 0..3 {
             // S J S terms, i.e. \Omega_1
             // Because j->j+1, flipping j effects *two* terms in the energy
-            ei -= s_jm1.dir[k] * j_jm1[k] * s_j.dir[k] + s_j.dir[k] * s_jp1.dir[k] * j_j[k];
+            ei -= s_jm1.dir[k] * j_jm1[k] * s_j.dir[k] + s_j.dir[k] * j_j[k] * s_jp1.dir[k];
         }
 
         //-(1)/(2 \omega) (  S^z + 2y . (J_j S_{j+1} + J_{j-1} S_{j-1}) x S_j )
@@ -335,7 +335,7 @@ impl SpinChain {
         let mut de: f64 = -ei;
         for k in 0..3 {
             de -=
-                s_jm1.dir[k] * j_jm1[k] * s_j.dir[k] + s_j.dir[k] * s_jp1.dir[k] * new_spin.dir[k];
+                s_jm1.dir[k] * j_jm1[k] * new_spin.dir[k] + new_spin.dir[k] * j_j[k] * s_jp1.dir[k];
         }
 
         if index < self.vars.ssize as usize {
