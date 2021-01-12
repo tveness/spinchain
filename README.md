@@ -5,12 +5,12 @@
 
 ## How to build rust project
 
-1. Clone the repository
+1. Clone the repository `git clone https://github.com/tveness/spinchain.git`
 2. Ensure the rust toolchain is installed, see https://rustup.rs/
 3. Run `cargo build --release` to compile a fast version of the code, it may
    take a couple of minutes
 4. The binary is now located at target/release/sc
-5. `sc --help` will product the help dialogue
+5. `sc --help` will product the help dialogue listed below
 6. `sc` will run a simple chain, and write the default configuration to `config.toml`
 
 
@@ -42,9 +42,11 @@ FLAGS:
     -V, --version        Prints version information
 
 OPTIONS:
-    -b, --beta <BETA>           Overrides config beta
-    -h, --histogram <POINTS>    Generate histograms via Monte-Carlo (hist_mc_mx.dat) and via time-evolution
-                                (hist_dyn_mx.dat) [default: 8000]
+    -b, --beta <BETA>             Overrides config beta
+    -h, --histogram <POINTS>      Generate histograms via Monte-Carlo (hist_mc.dat) and via time-evolution
+                                  (hist_dyn.dat) [default: 8000]
+        --magnus-hist <POINTS>    Generate histogram via Monte-Carlo (hist_mc_magnus.dat) for first-order Magnus
+                                  expansion, and print averages [default: 8000]
 ```
 
 
