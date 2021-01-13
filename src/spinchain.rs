@@ -39,8 +39,19 @@ impl SpinChain {
     /// If the file cannot be opened, write a config.toml with default values and use default
     /// values
     pub fn read_config(filename: &str) -> Config {
+        //Read files
         match fs::read_to_string(filename) {
-            Ok(s) => toml::from_str(&s).unwrap(),
+            //If okay, parse
+            Ok(s) => match toml::from_str(&s) {
+                Ok(x) => x,
+                Err(e) => {
+                    //Panic if file is invalid
+                    panic!("Invalid configuration: {:?}", e);
+                    //println!("Invalid configuration: {:?}", e);
+                    //println!("Using default configuration instead");
+                    //Config::default()
+                }
+            },
             Err(e) => {
                 eprintln!(
                     "Problem reading {}, written default configuration to config.toml and using this",
@@ -87,47 +98,35 @@ impl SpinChain {
         let unif = Uniform::from(0.0..1.0);
         let spins: Vec<Spin> = (0..conf.hsize as usize)
             .map(|x| {
+                // Choose rotation direction randomly from sphere
+                
                 let theta_perp: f64 = 2.0 * PI * unif.sample(&mut r);
                 let phi_perp: f64 = (1.0 - 2.0 * unif.sample(&mut r)).acos();
 
-                //                                let theta_perp: f64 = PI / 4.0;
-                //                               let phi_perp: f64 = 0.01;
                 let rot_dir: [f64; 3] = [
                     theta_perp.cos() * phi_perp.sin(),
                     theta_perp.sin() * phi_perp.sin(),
                     phi_perp.cos(),
                 ];
 
-                //                let rot_angle: f64 = spin_normal.sample(&mut r);
-
-                // Inverse transform sample \sin \theta e^{\beta\cos\theta}
+                // Inverse transform sample \theta from the distribution P(\theta) =  \sin \theta e^{\beta\cos\theta}
 
                 let rot_angle: f64 =
                     ((b_e - unif.sample(&mut r) * (b_e - b_ei)).ln() / beta_eff).acos();
-                //                theta += rot_angle;
 
+                // Rotate by \theta about random direction
                 let n: [f64; 2] = Spin::rot_perp(&[theta, phi], &rot_dir, rot_angle);
 
-                /*
-                println!(
-                    "theta+rot: {}, phi-pi/2: {}",
-                    theta + rot_angle,
-                    phi - PI / 2.0
-                );
-                */
                 theta = n[0];
                 phi = n[1];
-                /*
-                println!("theta    : {}, phi-pi/2: {}", theta, phi - PI / 2.0);
-                */
 
                 Spin::new_xyz(&[theta.cos() * phi.sin(), theta.sin() * phi.sin(), phi.cos()])
             })
             .collect();
 
-        //Initialise J as [1+N(jvar),1+N(jvar),lamba+N(jvar)]
+        //Initialise J as [1+N(jvar),1+N(jvar),lambda+N(jvar)]
         let j_normal = Normal::new(0.0, conf.jvar).unwrap();
-        //        let v = normal.sample(&mut r);
+        
         let j_couple: Vec<[f64; 3]> = (0..conf.hsize)
             .map(|x| {
                 [

@@ -30,18 +30,33 @@ fn print_config_description() {
     println!("trel = {}       # minus initial time", c.trel);
     println!("tau = {}       # period of drive", c.tau);
     println!("lambda = {}     # value of J_z coupling", c.lambda);
-    println!("hfield = {:?} # constant h field on entire system", c.hfield);
+    println!(
+        "hfield = {:?} # constant h field on entire system",
+        c.hfield
+    );
     println!("hs = {:?}     # constant h field on subsystem", c.hs);
-    println!("jvar = {}   # variance in J couplings (x, y, z independent)", c.jvar);
+    println!(
+        "jvar = {}   # variance in J couplings (x, y, z independent)",
+        c.jvar
+    );
     println!("hvar = {}       # variance in field", c.hvar);
-    println!("method = {}     # method for numerical integration (2=2nd order Suzuki-Trotter)", c.method);
+    println!(
+        "method = {}     # method for numerical integration (2=2nd order Suzuki-Trotter)",
+        c.method
+    );
     println!("ednsty = {} # energy-density of initial state", c.ednsty);
-    println!("file = \"{}\"   # pattern for log files i.e. log0.dat, log1.dat", c.file);
+    println!(
+        "file = \"{}\"   # pattern for log files i.e. log0.dat, log1.dat",
+        c.file
+    );
     println!("strob = {}  # stroboscopic evaluation", c.strob);
     println!("offset = {}     # first file i.e. log0.dat", c.offset);
     println!("drive = {}   # drive enabled", c.drive);
     println!("beta = {}    # beta (determined from ednsty)", c.beta);
-    println!("drivetype = \"{:?}\" # type of driving, can be \"xyplane\", \"uniaxial\" ", c.drivetype);
+    println!(
+        "drivetype = \"{:?}\" # type of driving, can be \"xyplane\", \"uniaxial\" ",
+        c.drivetype
+    );
 }
 
 ///Generate ```sample_num``` samples via Monte Carlo using first-order Magnus expansion system
