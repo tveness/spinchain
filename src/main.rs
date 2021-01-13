@@ -185,6 +185,7 @@ fn run_sim(conf: &mut Config) {
             for _ in 0..2e7 as usize {
                 spin_chain.metropolis_update();
             }
+            pb.reset_eta();
             let tau_steps: u64 = (spin_chain.vars.tau / spin_chain.vars.dt) as u64;
 
             spin_chain.log();
