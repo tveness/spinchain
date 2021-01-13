@@ -18,6 +18,32 @@ use clap::{crate_version, App, Arg};
 
 use glob::glob;
 
+fn print_config_description() {
+    let c: Config = Config::default();
+    println!("# Default config and description of options");
+    println!("hsize = {}    # size of the system", c.hsize);
+    println!("ssize = {}      # size of subsystem (driven part)", c.ssize);
+    println!("t = {}        # final time of simulation", c.t);
+    println!("dt = {}      # time-step for simulation", c.dt);
+    println!("runs = {}       # number runs to perform", c.runs);
+    println!("threads = {}    # number of parallel threads", c.threads);
+    println!("trel = {}       # minus initial time", c.trel);
+    println!("tau = {}       # period of drive", c.tau);
+    println!("lambda = {}     # value of J_z coupling", c.lambda);
+    println!("hfield = {:?} # constant h field on entire system", c.hfield);
+    println!("hs = {:?}     # constant h field on subsystem", c.hs);
+    println!("jvar = {}   # variance in J couplings (x, y, z independent)", c.jvar);
+    println!("hvar = {}       # variance in field", c.hvar);
+    println!("method = {}     # method for numerical integration (2=2nd order Suzuki-Trotter)", c.method);
+    println!("ednsty = {} # energy-density of initial state", c.ednsty);
+    println!("file = \"{}\"   # pattern for log files i.e. log0.dat, log1.dat", c.file);
+    println!("strob = {}  # stroboscopic evaluation", c.strob);
+    println!("offset = {}     # first file i.e. log0.dat", c.offset);
+    println!("drive = {}   # drive enabled", c.drive);
+    println!("beta = {}    # beta (determined from ednsty)", c.beta);
+    println!("drivetype = \"{:?}\" # type of driving, can be \"xyplane\", \"uniaxial\" ", c.drivetype);
+}
+
 ///Generate ```sample_num``` samples via Monte Carlo using first-order Magnus expansion system
 ///indeed thermalises via time-evolution
 fn gen_hist_magnus(conf: &mut Config, sample_num: usize) {
@@ -444,33 +470,7 @@ fn main() {
     match matches.occurrences_of("config-description") {
         0 => {}
         _ => {
-            println!("# Default config and description of options");
-            println!("hsize = 2000 # size of the system");
-            println!("ssize = 20   # size of subsystem (driven part)");
-            println!("t = 500.0    # final time of simulation");
-            println!("dt = 0.02    # time-step for simulation");
-            println!("runs = 2     # number runs to perform");
-            println!("threads = 2  # number of parallel threads");
-            println!("trel = 0.0   # minus initial time");
-            println!("tau = 10.0   # period of drive");
-            println!("lambda = 1.0 # value of J_z coupling");
-            println!("hfield = [0.0, 0.0, 0.0] # constant h field on entire system");
-            println!("hs = [0.0, 0.0, 0.0]     # constant h field on subsystem");
-            println!("jvar = 0.001 # variance in J couplings (x, y, z independent)");
-            println!("hvar = 0.0   # variance in field");
-            println!(
-                "method = 2   # method for numerical integration (2=2nd order Suzuki-Trotter)"
-            );
-            println!("ednsty = -0.66 # energy-density of initial state");
-            println!("file = \"log\"   # pattern for log files i.e. log0.dat, log1.dat");
-            println!("strob = false  # stroboscopic evaluation");
-            println!("offset = 0     # first file i.e. log0.dat");
-            println!("drive = true   # drive enabled");
-            println!("beta = 2.8889029604295944 # beta (determined from ednsty)");
-            println!(
-                "drivetype = \"xyplane\" # type of driving, can be \"xyplane\", \"uniaxial\" "
-            );
-
+            print_config_description();
             default = false;
         }
     }
