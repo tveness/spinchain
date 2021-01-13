@@ -1,9 +1,10 @@
 # Classical spin chain simulation
 
+Linux binary [available](https://github.com/tveness/spinchain/releases)
+
 ![Build](https://github.com/tveness/spinchain/workflows/build-test/badge.svg)
 
-
-## How to build rust project
+## How to build the rust project
 
 1. Clone the repository `git clone https://github.com/tveness/spinchain.git`
 2. Ensure the rust toolchain is installed, see https://rustup.rs/
