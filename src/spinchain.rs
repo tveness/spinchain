@@ -569,10 +569,20 @@ impl SpinChain {
         //        if t < 0.0 {
         //            return [0.0, 0.0, 0.0];
         //        }
-        let pi = std::f64::consts::PI;
-        let phi: f64 = 2.0 * pi * t / self.vars.tau;
+        match self.vars.drivetype {
+            DriveType::xyplane => {
+                let pi = std::f64::consts::PI;
+                let phi: f64 = 2.0 * pi * t / self.vars.tau;
 
-        [phi.cos(), phi.sin(), 0.0]
+                [phi.cos(), phi.sin(), 0.0]
+            }
+            DriveType::uniaxial => {
+                let pi = std::f64::consts::PI;
+                let phi: f64 = 2.0 * pi * t / self.vars.tau;
+
+                [phi.cos(), 0.0, 0.0]
+            }
+        }
     }
 
     fn j_s(j: &[f64; 3], s: &Spin) -> [f64; 3] {

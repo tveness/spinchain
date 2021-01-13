@@ -5,6 +5,7 @@ use std::io::{prelude::*, BufReader};
 use threadpool::ThreadPool;
 mod config;
 use self::config::Config;
+use self::config::DriveType;
 
 mod spin;
 use self::spin::Spin;
@@ -13,7 +14,7 @@ use std::f64::consts::PI;
 mod spinchain;
 use self::spinchain::SpinChain;
 
-use clap::{App, Arg,crate_version};
+use clap::{crate_version, App, Arg};
 
 use glob::glob;
 
