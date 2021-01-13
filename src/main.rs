@@ -13,7 +13,7 @@ use std::f64::consts::PI;
 mod spinchain;
 use self::spinchain::SpinChain;
 
-use clap::{App, Arg};
+use clap::{App, Arg,crate_version};
 
 use glob::glob;
 
@@ -389,7 +389,7 @@ fn main() {
     //Create spin chain with parameters in file "config.toml"
 
     let matches = App::new("spinchain")
-        .version("0.1")
+        .version(crate_version!())
         .author("Thomas Veness <thomas.veness@nottingham.ac.uk>")
         .about("Run classical spin chain simulation")
         .arg(

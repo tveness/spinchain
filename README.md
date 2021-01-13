@@ -26,9 +26,9 @@ where $J={\rm diag}(1,1,\lambda)$ plus noise on the diagonal drawn from a
 normal distribution, and the local magnetic field is a static field plus noise
 drawn from a separate normal distribution.
 
-## Usage 
+## Usage (output of `sc --help`)
 ```
-spinchain 0.1
+spinchain 0.1.1
 Thomas Veness <thomas.veness@nottingham.ac.uk>
 Run classical spin chain simulation
 
@@ -37,6 +37,7 @@ USAGE:
 
 FLAGS:
     -a, --avg            Calculate average of runs
+        --config-desc    Print description of config file
         --help           Prints help information
     -m, --monte-carlo    Calculate an average quantitity in Monte-Carlo
     -V, --version        Prints version information
@@ -54,8 +55,10 @@ OPTIONS:
 # Configuration features
 
 In config.toml (if not present, default will be generated when running), there
-are the following parameters 
+are the following parameters  (obtains by running `sc --config-desc`)
 ```
+
+# Default config and description of options
 hsize = 2000 # size of the system
 ssize = 20   # size of subsystem (driven part)
 t = 500.0    # final time of simulation
@@ -65,7 +68,8 @@ threads = 2  # number of parallel threads
 trel = 0.0   # minus initial time
 tau = 10.0   # period of drive
 lambda = 1.0 # value of J_z coupling
-hfield = [0.0, 0.0, 0.0] # constant h field
+hfield = [0.0, 0.0, 0.0] # constant h field on entire system
+hs = [0.0, 0.0, 0.0]     # constant h field on subsystem
 jvar = 0.001 # variance in J couplings (x, y, z independent)
 hvar = 0.0   # variance in field
 method = 2   # method for numerical integration (2=2nd order Suzuki-Trotter)
@@ -75,6 +79,7 @@ strob = false  # stroboscopic evaluation
 offset = 0     # first file i.e. log0.dat
 drive = true   # drive enabled
 beta = 2.8889029604295944 # beta (determined from ednsty)
+drivetype = "xyplane" # type of driving, can be "xyplane", "uniaxial" 
 ```
 
 # Running the program
