@@ -419,10 +419,7 @@ impl SpinChain {
 
         let l: usize = self.vars.hsize as usize;
 
-        let h_e: [f64; 3] = match self.vars.drive {
-            true => self.h_ext(self.t),
-            false => [0.0, 0.0, 0.0],
-        };
+        let h_e: [f64; 3] = self.h_ext(self.t);
 
         let hfield: Vec<[f64; 3]> = (0..self.vars.hsize as usize)
             .map(|x| match x {
@@ -484,10 +481,7 @@ impl SpinChain {
         }
 
         //Driving field on sub-system
-        let h_e: [f64; 3] = match self.vars.drive {
-            true => self.h_ext(self.t),
-            false => [0.0, 0.0, 0.0],
-        };
+        let h_e: [f64; 3] = self.h_ext(self.t);
         for i in 0..ss {
             sh += SpinChain::sh_energy(&self.spins[i], &h_e);
             //            for k in 0..3 {
@@ -513,10 +507,7 @@ impl SpinChain {
         let mut e: f64 = 0.0;
 
         //Get energy of magnetic field terms
-        let h_e: [f64; 3] = match self.vars.drive {
-            true => self.h_ext(self.t),
-            false => [0.0, 0.0, 0.0],
-        };
+        let h_e: [f64; 3] = self.h_ext(self.t);
 
         // Field is static field + external field
         let h: Vec<[f64; 3]> = (0..s)
@@ -568,7 +559,7 @@ impl SpinChain {
         //        if t < 0.0 {
         //            return [0.0, 0.0, 0.0];
         //        }
-        match self.vars.drivetype {
+        match self.vars.drive {
             DriveType::xyplane => {
                 let pi = std::f64::consts::PI;
                 let phi: f64 = 2.0 * pi * t / self.vars.tau;
@@ -580,6 +571,9 @@ impl SpinChain {
                 let phi: f64 = 2.0 * pi * t / self.vars.tau;
 
                 [phi.cos(), 0.0, 0.0]
+            }
+            DriveType::none => {
+                [0.0, 0.0, 0.0]
             }
         }
     }
@@ -594,10 +588,7 @@ impl SpinChain {
         // \Omega_n = J_{n-1} S_{n-1} + J_n S_{n+1} - B_n
 
         // Calculate field here
-        let h_ext: [f64; 3] = match self.vars.drive {
-            true => self.h_ext(self.t + self.vars.dt),
-            false => [0.0, 0.0, 0.0],
-        };
+        let h_ext: [f64; 3] = self.h_ext(self.t + self.vars.dt);
 
         let s: usize = self.vars.ssize as usize;
 
@@ -774,7 +765,7 @@ mod tests {
         //Point all spins along the x axis
         sc.spins = vec![Spin::new_xyz(&[1.0, 0.0, 0.0]); sc.spins.len()];
         sc.static_h = vec![[0.0, 0.0, 1.0]; sc.static_h.len()];
-        sc.vars.drive = false;
+        sc.vars.drive = DriveType::none;
         //Update with just static field, and check that each spin evolves correctly
         for i in 0..100 {
             let abs_diff: f64 = (sc.spins[7].dir[0] - (sc.vars.dt * i as f64).cos()).abs();
@@ -807,7 +798,7 @@ mod tests {
         sc.j_couple = vec![[1.0, 1.0, 1.0]; sc.vars.hsize as usize];
         sc.static_h = vec![[0.0, 0.0, 0.0]; sc.vars.hsize as usize];
         sc.vars.beta = 1000.0;
-        sc.vars.drive = false;
+        sc.vars.drive = DriveType::none;
 
         for i in 0..1e7 as usize {
             sc.metropolis_update();

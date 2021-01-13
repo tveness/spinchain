@@ -51,18 +51,17 @@ fn print_config_description() {
     );
     println!("strob = {}  # stroboscopic evaluation", c.strob);
     println!("offset = {}     # first file i.e. log0.dat", c.offset);
-    println!("drive = {}   # drive enabled", c.drive);
     println!("beta = {}    # beta (determined from ednsty)", c.beta);
     println!(
         "drivetype = \"{:?}\" # type of driving, can be \"xyplane\", \"uniaxial\" ",
-        c.drivetype
+        c.drive
     );
 }
 
 ///Generate ```sample_num``` samples via Monte Carlo using first-order Magnus expansion system
 ///indeed thermalises via time-evolution
 fn gen_hist_magnus(conf: &mut Config, sample_num: usize) {
-    conf.drive = false;
+    conf.drive = DriveType::none;
     conf.file = "x".to_string();
     let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
 
@@ -120,7 +119,7 @@ fn gen_hist_magnus(conf: &mut Config, sample_num: usize) {
 ///Generate ```sample_num``` samples via Monte Carlo and dynamical evolution to check that the
 ///system indeed thermalises via time-evolution
 fn gen_hist(conf: &mut Config, sample_num: usize) {
-    conf.drive = false;
+    conf.drive = DriveType::none;
     conf.file = "x".to_string();
 
     let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);

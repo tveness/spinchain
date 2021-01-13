@@ -58,28 +58,27 @@ OPTIONS:
 In config.toml (if not present, default will be generated when running), there
 are the following parameters  (obtains by running `sc --config-desc`)
 ```
-
 # Default config and description of options
-hsize = 2000 # size of the system
-ssize = 20   # size of subsystem (driven part)
-t = 500.0    # final time of simulation
-dt = 0.02    # time-step for simulation
-runs = 2     # number runs to perform
-threads = 2  # number of parallel threads
-trel = 0.0   # minus initial time
-tau = 10.0   # period of drive
-lambda = 1.0 # value of J_z coupling
+hsize = 512    # size of the system
+ssize = 8      # size of subsystem (driven part)
+t = 256        # final time of simulation
+dt = 0.02      # time-step for simulation
+runs = 2       # number runs to perform
+threads = 2    # number of parallel threads
+trel = 0       # minus initial time
+tau = 10       # period of drive
+lambda = 1     # value of J_z coupling
 hfield = [0.0, 0.0, 0.0] # constant h field on entire system
 hs = [0.0, 0.0, 0.0]     # constant h field on subsystem
-jvar = 0.001 # variance in J couplings (x, y, z independent)
-hvar = 0.0   # variance in field
-method = 2   # method for numerical integration (2=2nd order Suzuki-Trotter)
+jvar = 0.001   # variance in J couplings (x, y, z independent)
+hvar = 0       # variance in field
+method = 2     # method for numerical integration (2=2nd order Suzuki-Trotter)
 ednsty = -0.66 # energy-density of initial state
 file = "log"   # pattern for log files i.e. log0.dat, log1.dat
 strob = false  # stroboscopic evaluation
 offset = 0     # first file i.e. log0.dat
 drive = true   # drive enabled
-beta = 2.8889029604295944 # beta (determined from ednsty)
+beta = 2.88    # beta (determined from ednsty)
 drivetype = "xyplane" # type of driving, can be "xyplane", "uniaxial" 
 ```
 

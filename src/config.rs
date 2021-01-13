@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 pub enum DriveType {
     xyplane,
     uniaxial,
+    none,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
@@ -46,12 +47,10 @@ pub struct Config {
     pub strob: bool,
     /// Offset for log
     pub offset: u32,
-    /// Drive on/off
-    pub drive: bool,
     /// Inverse temperature for Monte Carlo
     pub beta: f64,
     pub mc_points: usize,
-    pub drivetype: DriveType,
+    pub drive: DriveType,
 }
 
 impl Default for Config {
@@ -74,11 +73,10 @@ impl Default for Config {
             ednsty: -0.66,
             file: "log".to_string(),
             strob: false,
-            drive: true,
             beta: 2.88,
             mc_points: 1000,
             offset: 0,
-            drivetype: DriveType::xyplane,
+            drive: DriveType::xyplane,
         }
     }
 }
