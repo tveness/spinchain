@@ -29,7 +29,7 @@ drawn from a separate normal distribution.
 
 ## Usage (output of `sc --help`)
 ```
-spinchain 0.1.2
+spinchain 0.1.21
 Thomas Veness <thomas.veness@nottingham.ac.uk>
 Run classical spin chain simulation
 
@@ -79,7 +79,7 @@ strob = false  # stroboscopic evaluation
 offset = 0     # first file i.e. log0.dat
 drive = true   # drive enabled
 beta = 2.88    # beta (determined from ednsty)
-drivetype = "xyplane" # type of driving, can be "xyplane", "uniaxial" 
+drivetype = "xyplane" # type of driving, can be "xyplane", "uniaxial", "none"
 ```
 
 # Running the program
