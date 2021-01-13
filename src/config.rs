@@ -1,6 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
+pub enum DriveType {
+    xyplane,
+    uniaxial,
+}
+
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(default)]
 /// This stores a configuration for the classical spin chain
 pub struct Config {
@@ -45,6 +51,7 @@ pub struct Config {
     /// Inverse temperature for Monte Carlo
     pub beta: f64,
     pub mc_points: usize,
+    pub drivetype: DriveType,
 }
 
 impl Default for Config {
@@ -71,6 +78,7 @@ impl Default for Config {
             beta: 2.88,
             mc_points: 1000,
             offset: 0,
+            drivetype: DriveType::xyplane,
         }
     }
 }

@@ -388,9 +388,6 @@ fn run_mc(conf: &mut Config) {
 fn main() {
     //Create spin chain with parameters in file "config.toml"
 
-    //Want to read num from file
-    let mut conf: Config = SpinChain::read_config("config.toml");
-
     let matches = App::new("spinchain")
         .version("0.1")
         .author("Thomas Veness <thomas.veness@nottingham.ac.uk>")
@@ -432,8 +429,49 @@ fn main() {
             .default_value("8000")
             .help("Generate histogram via Monte-Carlo (hist_mc_magnus.dat) for first-order Magnus expansion, and print averages"),
             )
+        .arg(
+            Arg::with_name("config-description")
+            .long("config-desc")
+            .help("Print description of config file"),
+            )
         .get_matches();
     let mut default = true;
+    //Want to read num from file
+    let mut conf: Config = SpinChain::read_config("config.toml");
+
+    match matches.occurrences_of("config-description") {
+        0 => {}
+        _ => {
+            println!("# Default config and description of options");
+            println!("hsize = 2000 # size of the system");
+            println!("ssize = 20   # size of subsystem (driven part)");
+            println!("t = 500.0    # final time of simulation");
+            println!("dt = 0.02    # time-step for simulation");
+            println!("runs = 2     # number runs to perform");
+            println!("threads = 2  # number of parallel threads");
+            println!("trel = 0.0   # minus initial time");
+            println!("tau = 10.0   # period of drive");
+            println!("lambda = 1.0 # value of J_z coupling");
+            println!("hfield = [0.0, 0.0, 0.0] # constant h field on entire system");
+            println!("hs = [0.0, 0.0, 0.0]     # constant h field on subsystem");
+            println!("jvar = 0.001 # variance in J couplings (x, y, z independent)");
+            println!("hvar = 0.0   # variance in field");
+            println!(
+                "method = 2   # method for numerical integration (2=2nd order Suzuki-Trotter)"
+            );
+            println!("ednsty = -0.66 # energy-density of initial state");
+            println!("file = \"log\"   # pattern for log files i.e. log0.dat, log1.dat");
+            println!("strob = false  # stroboscopic evaluation");
+            println!("offset = 0     # first file i.e. log0.dat");
+            println!("drive = true   # drive enabled");
+            println!("beta = 2.8889029604295944 # beta (determined from ednsty)");
+            println!(
+                "drivetype = \"xyplane\" # type of driving, can be \"xyplane\", \"uniaxial\" "
+            );
+
+            default = false;
+        }
+    }
 
     if let Some(b) = matches.value_of("beta") {
         //        println!("Overriding to: {}", b);
