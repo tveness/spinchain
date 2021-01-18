@@ -99,7 +99,7 @@ impl SpinChain {
         let spins: Vec<Spin> = (0..conf.hsize as usize)
             .map(|x| {
                 // Choose rotation direction randomly from sphere
-                
+
                 let theta_perp: f64 = 2.0 * PI * unif.sample(&mut r);
                 let phi_perp: f64 = (1.0 - 2.0 * unif.sample(&mut r)).acos();
 
@@ -126,7 +126,7 @@ impl SpinChain {
 
         //Initialise J as [1+N(jvar),1+N(jvar),lambda+N(jvar)]
         let j_normal = Normal::new(0.0, conf.jvar).unwrap();
-        
+
         let j_couple: Vec<[f64; 3]> = (0..conf.hsize)
             .map(|x| {
                 [
@@ -572,9 +572,13 @@ impl SpinChain {
 
                 [phi.cos(), 0.0, 0.0]
             }
-            DriveType::none => {
-                [0.0, 0.0, 0.0]
+            DriveType::xyelliptic => {
+                let pi = std::f64::consts::PI;
+                let phi: f64 = 2.0 * pi * t / self.vars.tau;
+
+                [phi.cos(), 0.9 * phi.sin(), 0.0]
             }
+            DriveType::none => [0.0, 0.0, 0.0],
         }
     }
 
@@ -690,10 +694,6 @@ impl SpinChain {
     }
 }
 
-//extern crate test;
-pub fn add_two(a: i32) -> i32 {
-    a + 2
-}
 
 #[cfg(test)]
 mod tests {
@@ -736,9 +736,9 @@ mod tests {
         let s2doth: f64 = SpinChain::sh_energy(&s2, &f);
         let s3doth: f64 = SpinChain::sh_energy(&s3, &f);
 
-        assert!((s1doth - f[2]).abs() < 0.0001);
-        assert!((s2doth - f[0]).abs() < 0.0001);
-        assert!((s3doth - f[1]).abs() < 0.0001);
+        assert_almost_eq!(s1doth, f[2], 0.0001);
+        assert_almost_eq!(s2doth, f[0], 0.0001);
+        assert_almost_eq!(s3doth, f[1], 0.0001);
     }
 
     #[test]
@@ -751,10 +751,9 @@ mod tests {
             e_total += sc.total_energy2();
         }
         let e_avg: f64 = e_total / num;
-        let abs_diff = (e_target - e_avg).abs();
         println!("e_target: {}", e_target);
         println!("e_calc:   {}", e_avg);
-        assert!(abs_diff < 0.02);
+        assert_almost_eq!(e_target, e_avg, 0.02);
     }
 
     #[test]
@@ -768,17 +767,15 @@ mod tests {
         sc.vars.drive = DriveType::none;
         //Update with just static field, and check that each spin evolves correctly
         for i in 0..100 {
-            let abs_diff: f64 = (sc.spins[7].dir[0] - (sc.vars.dt * i as f64).cos()).abs();
+            let x_true: f64 = sc.spins[7].dir[0];
+            let x_assert: f64 = (sc.vars.dt * i as f64).cos();
+            assert_almost_eq!(x_true, x_assert, 0.001);
             sc.update();
-            println!("spin[7]: {:?}", sc.spins[7].xyz());
-            println!("cos[it]: {}", (sc.vars.dt * i as f64).cos());
-            println!("abs diff: {}", abs_diff);
-            assert!(abs_diff < 0.001);
         }
     }
 
     #[test]
-    fn static_field_norma() {
+    fn static_field_normal() {
         let sc: SpinChain = SpinChain::new(Config::default(), 0);
         let hx: f64 = sc.static_h.iter().map(|x| x[0]).sum();
         let hy: f64 = sc.static_h.iter().map(|x| x[1]).sum();
@@ -791,7 +788,9 @@ mod tests {
         assert!(hh <= 2.0 * 3.0 * hvar_n);
     }
 
-    //    #[test]
+    //This test is slow: can we make it better?
+    //Also, can we make it always pass?
+    #[test]
     fn metropolis_low_t() {
         let mut sc: SpinChain = SpinChain::new(Config::default(), 0);
         //Make the chain clean
@@ -799,8 +798,9 @@ mod tests {
         sc.static_h = vec![[0.0, 0.0, 0.0]; sc.vars.hsize as usize];
         sc.vars.beta = 1000.0;
         sc.vars.drive = DriveType::none;
+        let num: usize = 1_000_000;
 
-        for i in 0..1e7 as usize {
+        for i in 0..num as usize {
             sc.metropolis_update();
         }
         //Expect energy to be approx -L - B l
@@ -808,11 +808,10 @@ mod tests {
         let e: f64 = sc.total_energy2();
         //        println!("Exp: {}", -1.0 - lL);
         let e_exact: f64 = 1.0 / sc.vars.beta - 1.0 / sc.vars.beta.tanh();
-        println!("Exp: {}", -1.0);
+        println!("Exp: {}", e);
         println!("Actual: {}", e_exact);
         //        let ediff: f64 = (-1.0 - lL - e).abs();
-        let ediff: f64 = (e_exact - e).abs();
 
-        assert!(ediff < 0.01);
+        assert_almost_eq!(e, e_exact, 30.0 / ((num as f64).sqrt()));
     }
 }

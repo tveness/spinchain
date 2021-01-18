@@ -4,8 +4,9 @@ use std::fs::{File, OpenOptions};
 use std::io::{prelude::*, BufReader};
 use threadpool::ThreadPool;
 mod config;
-use self::config::Config;
-use self::config::DriveType;
+use self::config::{Config, DriveType};
+
+mod macros;
 
 mod spin;
 use self::spin::Spin;
@@ -266,6 +267,7 @@ fn average(conf: &mut Config) {
     let mut avg_data: Vec<Vec<f64>> = Vec::with_capacity((conf.t / conf.dt) as usize);
     let mut avg_nums: Vec<f64> = Vec::with_capacity((conf.t / conf.dt) as usize);
     let entries = glob(&file_prefix).expect("Failed to find log files");
+    //Can this be done more elegantly?
     let entriesc = glob(&file_prefix).expect("Failed to find log files");
     let pb = ProgressBar::new(entriesc.fold(0, |acc, _| acc + 1));
     pb.set_style(
@@ -322,6 +324,7 @@ fn average(conf: &mut Config) {
     println!("Writing averaged data");
     let ofile = File::create("avg.dat").unwrap();
     for (i, item) in avg_data.iter().enumerate() {
+        //Can this be done better?
         writeln!(
             &ofile,
             "{} {} {} {} {} {} {}",

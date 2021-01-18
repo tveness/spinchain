@@ -1,8 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
+#[allow(non_camel_case_types)]
+/// Types of drive which determine what h_ext does
 pub enum DriveType {
     xyplane,
+    xyelliptic,
     uniaxial,
     none,
 }
