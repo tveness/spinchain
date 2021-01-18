@@ -54,7 +54,7 @@ fn print_config_description() {
     println!("offset = {}     # first file i.e. log0.dat", c.offset);
     println!("beta = {}    # beta (determined from ednsty)", c.beta);
     println!(
-        "drivetype = \"{:?}\" # type of driving, can be \"xyplane\", \"uniaxial\" ",
+        "drivetype = \"{:?}\" # type of driving, can be \"xyplane\", \"uniaxial\", \"elliptic\" ",
         c.drive
     );
 }
