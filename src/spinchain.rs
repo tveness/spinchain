@@ -694,7 +694,6 @@ impl SpinChain {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
