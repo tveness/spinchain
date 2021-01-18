@@ -77,9 +77,8 @@ ednsty = -0.66 # energy-density of initial state
 file = "log"   # pattern for log files i.e. log0.dat, log1.dat
 strob = false  # stroboscopic evaluation
 offset = 0     # first file i.e. log0.dat
-drive = true   # drive enabled
 beta = 2.88    # beta (determined from ednsty)
-drivetype = "xyplane" # type of driving, can be "xyplane", "uniaxial", "none"
+drivetype = "xyplane" # type of driving, can be "xyplane", "uniaxial", "elliptic" 
 ```
 
 # Running the program
