@@ -214,7 +214,7 @@ fn run_tau(taus: Vec<f64>, steps: u32, conf: &mut Config) {
     for (i, tau) in taus.iter().enumerate() {
         let mut spin_chain: SpinChain = SpinChain::new(conf.clone(), i + conf.offset as usize);
         spin_chain.vars.tau = tau.clone();
-        spin_chain.vars.dt = spin_chain.vars.tau / 10.0;
+        spin_chain.vars.dt = spin_chain.vars.tau / 100.0;
         spin_chain.vars.t = steps as f64 * spin_chain.vars.tau;
 
         // Initialise at a particular temperature, say T=1
@@ -223,7 +223,7 @@ fn run_tau(taus: Vec<f64>, steps: u32, conf: &mut Config) {
         pb.set_style(sty.clone());
 
         pool.execute(move || {
-            pb.set_message(&format!("Run {}", i));
+            pb.set_message(&format!("tau={tau}", tau = spin_chain.vars.tau));
 
             for _ in 0..2e7 as usize {
                 spin_chain.metropolis_update();
@@ -243,7 +243,7 @@ fn run_tau(taus: Vec<f64>, steps: u32, conf: &mut Config) {
             //Log final piece
             let evt_string: &str = &[
                 "evt".to_string(),
-                (spin_chain.vars.t / spin_chain.vars.tau).to_string(),
+                ((spin_chain.vars.t / spin_chain.vars.tau) as u32).to_string(),
                 ".dat".to_string(),
             ]
             .join("");
@@ -253,18 +253,20 @@ fn run_tau(taus: Vec<f64>, steps: u32, conf: &mut Config) {
                 .append(true)
                 .open(&evt_string)
                 .unwrap();
-            let e_total = spin_chain.system_energy();
-            let e_sub = spin_chain.total_energy2();
+            let es = spin_chain.system_energy();
+            let e = spin_chain.total_energy2();
             let m: [f64; 3] = spin_chain.m();
+            let s: f64 = spin_chain.vars.ssize as f64;
             writeln!(
                 &evt_file,
-                "{tau} {e_total} {e_sub} {mx} {my} {mz}",
+                "{tau} {t} {e_total} {e_sub} {mx} {my} {mz}",
                 tau = spin_chain.vars.tau,
-                e_total = e_total,
-                e_sub = e_sub,
-                mx = m[0],
-                my = m[1],
-                mz = m[2]
+                t = spin_chain.t,
+                e_total = e,
+                e_sub = es,
+                mx = m[0] / s,
+                my = m[1] / s,
+                mz = m[2] / s
             )
             .unwrap();
 
@@ -569,6 +571,7 @@ fn main() {
         .arg(
             Arg::with_name("steps")
             .value_name("STEPS")
+            .long("steps")
             .takes_value(true)
             .help("Set step limit when doing n-steps")
             )
