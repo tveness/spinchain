@@ -197,6 +197,86 @@ fn gen_hist(conf: &mut Config, sample_num: usize) {
     pb.finish_with_message("Done");
 }
 
+fn run_tau(taus: Vec<f64>, steps: u32, conf: &mut Config) {
+    let m = MultiProgress::new();
+    let sty = ProgressStyle::default_bar()
+        .template(
+            "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] t={pos}/{len} ({eta}) {msg}",
+        )
+        .progress_chars("#>-");
+
+    let threads = conf.threads;
+    let pool = ThreadPool::new(threads);
+
+    println!("Energy density: {}", conf.ednsty);
+    println!("Effective temperature: {}", conf.beta);
+
+    for (i, tau) in taus.iter().enumerate() {
+        let mut spin_chain: SpinChain = SpinChain::new(conf.clone(), i + conf.offset as usize);
+        spin_chain.vars.tau = tau.clone();
+        spin_chain.vars.dt = spin_chain.vars.tau / 10.0;
+        spin_chain.vars.t = steps as f64 * spin_chain.vars.tau;
+
+        // Initialise at a particular temperature, say T=1
+
+        let pb = m.add(ProgressBar::new(spin_chain.vars.t as u64));
+        pb.set_style(sty.clone());
+
+        pool.execute(move || {
+            pb.set_message(&format!("Run {}", i));
+
+            for _ in 0..2e7 as usize {
+                spin_chain.metropolis_update();
+            }
+            pb.reset_eta();
+
+            spin_chain.log();
+
+            while spin_chain.t < spin_chain.vars.t {
+                spin_chain.update();
+
+                if spin_chain.t.fract() < spin_chain.vars.dt {
+                    pb.set_position(spin_chain.t as u64);
+                }
+            }
+
+            //Log final piece
+            let evt_string: &str = &[
+                "evt".to_string(),
+                (spin_chain.vars.t / spin_chain.vars.tau).to_string(),
+                ".dat".to_string(),
+            ]
+            .join("");
+
+            let evt_file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open(&evt_string)
+                .unwrap();
+            let e_total = spin_chain.system_energy();
+            let e_sub = spin_chain.total_energy2();
+            let m: [f64; 3] = spin_chain.m();
+            writeln!(
+                &evt_file,
+                "{tau} {e_total} {e_sub} {mx} {my} {mz}",
+                tau = spin_chain.vars.tau,
+                e_total = e_total,
+                e_sub = e_sub,
+                mx = m[0],
+                my = m[1],
+                mz = m[2]
+            )
+            .unwrap();
+
+            pb.finish_and_clear();
+            //            pb.finish_with_message(&format!("Done {}",i));
+        });
+    }
+
+    //    m.join_and_clear().unwrap();
+    m.join().unwrap();
+}
+
 fn run_sim(conf: &mut Config) {
     let m = MultiProgress::new();
     let sty = ProgressStyle::default_bar()
@@ -479,6 +559,19 @@ fn main() {
             .long("config-desc")
             .help("Print description of config file"),
             )
+        .arg(
+            Arg::with_name("n-steps")
+            .value_name("TAUS")
+            .takes_value(true)
+            .long("n-steps")
+            .help("Generate single-shot time-evolution at different drive periods tau"),
+            )
+        .arg(
+            Arg::with_name("steps")
+            .value_name("STEPS")
+            .takes_value(true)
+            .help("Set step limit when doing n-steps")
+            )
         .get_matches();
     let mut default = true;
     //Want to read num from file
@@ -490,6 +583,22 @@ fn main() {
             print_config_description();
             default = false;
         }
+    }
+
+    let steps: u32 = match matches.value_of("steps") {
+        Some(x) => x.parse::<u32>().unwrap(),
+        None => 1000,
+    };
+
+    if let Some(taus) = matches.value_of("n-steps") {
+        //        println!("Overriding to: {}", b);
+        let tau_vec: Vec<f64> = taus
+            .split(",")
+            .map(|word| word.parse::<f64>().unwrap())
+            .collect();
+        println!("{:?}", tau_vec);
+        run_tau(tau_vec.clone(), steps.clone(), &mut conf);
+        default = false;
     }
 
     if let Some(b) = matches.value_of("beta") {

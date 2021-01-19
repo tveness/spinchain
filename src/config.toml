@@ -14,4 +14,4 @@ ednsty = -0.66
 file = "log"
 strob = false
 offset = 8
-drive = true
+drive = "xyplane"
