@@ -1,6 +1,6 @@
 [package]
 name = "sc"
-version = "0.1.22"
+version = "0.1.23"
 authors = ["Thomas Veness <thomas.veness@nottingham.ac.uk>"]
 edition = "2018"
 

@@ -29,7 +29,7 @@ drawn from a separate normal distribution.
 
 ## Usage (output of `sc --help`)
 ```
-spinchain 0.1.21
+spinchain 0.1.23
 Thomas Veness <thomas.veness@nottingham.ac.uk>
 Run classical spin chain simulation
 
@@ -49,6 +49,8 @@ OPTIONS:
                                   (hist_dyn.dat) [default: 8000]
         --magnus-hist <POINTS>    Generate histogram via Monte-Carlo (hist_mc_magnus.dat) for first-order Magnus
                                   expansion, and print averages [default: 8000]
+        --n-steps <TAUS>          Generate single-shot time-evolution at different drive periods tau
+        --steps <STEPS>           Set step limit when doing n-steps
 ```
 
 
