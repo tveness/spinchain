@@ -5,6 +5,8 @@ use std::io::{prelude::*, BufReader};
 use threadpool::ThreadPool;
 mod config;
 use self::config::{Config, DriveType};
+use std::sync::mpsc;
+use std::thread;
 
 mod macros;
 
@@ -18,6 +20,15 @@ use self::spinchain::SpinChain;
 use clap::{crate_version, App, Arg};
 
 use glob::glob;
+
+fn write_in_bg(file: File, rx: std::sync::mpsc::Receiver<String>) {
+    thread::spawn(move || {
+        for received in rx {
+            println!("Got {}", &received);
+            writeln!(&file, "{}", &received).unwrap();
+        }
+    });
+}
 
 fn print_config_description() {
     let c: Config = Config::default();
@@ -208,12 +219,25 @@ fn run_tau(taus: Vec<f64>, steps: u32, conf: &mut Config) {
     let threads = conf.threads;
     let pool = ThreadPool::new(threads);
 
+    let (tx, rx) = mpsc::channel();
+
+    //Write logs
+    let evt_string: &str = &["evt".to_string(), (steps).to_string(), ".dat".to_string()].join("");
+
+    let evt_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&evt_string)
+        .unwrap();
+
+    write_in_bg(evt_file, rx);
+
     println!("Energy density: {}", conf.ednsty);
     println!("Effective temperature: {}", conf.beta);
 
     for (i, tau) in taus.iter().enumerate() {
         let mut spin_chain: SpinChain = SpinChain::new(conf.clone(), i + conf.offset as usize);
-        spin_chain.vars.tau = tau.clone();
+        spin_chain.vars.tau = *tau;
         spin_chain.vars.dt = spin_chain.vars.tau / 100.0;
         spin_chain.vars.t = steps as f64 * spin_chain.vars.tau;
 
@@ -221,6 +245,7 @@ fn run_tau(taus: Vec<f64>, steps: u32, conf: &mut Config) {
 
         let pb = m.add(ProgressBar::new(spin_chain.vars.t as u64));
         pb.set_style(sty.clone());
+        let txc = mpsc::Sender::clone(&tx);
 
         pool.execute(move || {
             pb.set_message(&format!("tau={tau}", tau = spin_chain.vars.tau));
@@ -240,25 +265,11 @@ fn run_tau(taus: Vec<f64>, steps: u32, conf: &mut Config) {
                 }
             }
 
-            //Log final piece
-            let evt_string: &str = &[
-                "evt".to_string(),
-                ((spin_chain.vars.t / spin_chain.vars.tau) as u32).to_string(),
-                ".dat".to_string(),
-            ]
-            .join("");
-
-            let evt_file = OpenOptions::new()
-                .create(true)
-                .append(true)
-                .open(&evt_string)
-                .unwrap();
             let es = spin_chain.system_energy();
             let e = spin_chain.total_energy2();
             let m: [f64; 3] = spin_chain.m();
             let s: f64 = spin_chain.vars.ssize as f64;
-            writeln!(
-                &evt_file,
+            let formatted_string: String = format!(
                 "{tau} {t} {e_total} {e_sub} {mx} {my} {mz}",
                 tau = spin_chain.vars.tau,
                 t = spin_chain.t,
@@ -267,15 +278,14 @@ fn run_tau(taus: Vec<f64>, steps: u32, conf: &mut Config) {
                 mx = m[0] / s,
                 my = m[1] / s,
                 mz = m[2] / s
-            )
-            .unwrap();
+            );
+            txc.send(formatted_string).unwrap();
 
             pb.finish_and_clear();
             //            pb.finish_with_message(&format!("Done {}",i));
         });
     }
 
-    //    m.join_and_clear().unwrap();
     m.join().unwrap();
 }
 
@@ -491,8 +501,8 @@ fn run_mc(conf: &mut Config) {
     let mx_avg = mx_vec.iter().sum::<f64>() / points as f64;
     let my_avg = my_vec.iter().sum::<f64>() / points as f64;
     let mz_avg = mz_vec.iter().sum::<f64>() / points as f64;
-    let mxt_avg = mxt_vec.iter().sum::<f64>() / points as f64;
-    let myt_avg = myt_vec.iter().sum::<f64>() / points as f64;
+    //    let mxt_avg = mxt_vec.iter().sum::<f64>() / points as f64;
+    //    let myt_avg = myt_vec.iter().sum::<f64>() / points as f64;
     let mzt_avg = mzt_vec.iter().sum::<f64>() / points as f64;
     writeln!(
         &file_log,
@@ -596,11 +606,11 @@ fn main() {
     if let Some(taus) = matches.value_of("n-steps") {
         //        println!("Overriding to: {}", b);
         let tau_vec: Vec<f64> = taus
-            .split(",")
+            .split(',')
             .map(|word| word.parse::<f64>().unwrap())
             .collect();
         println!("{:?}", tau_vec);
-        run_tau(tau_vec.clone(), steps.clone(), &mut conf);
+        run_tau(tau_vec, steps, &mut conf);
         default = false;
     }
 
