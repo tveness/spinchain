@@ -576,7 +576,7 @@ impl SpinChain {
                 let pi = std::f64::consts::PI;
                 let phi: f64 = 2.0 * pi * t / self.vars.tau;
 
-                [phi.cos(), 0.9 * phi.sin(), 0.0]
+                [phi.cos(), self.vars.e * phi.sin(), 0.0]
             }
             DriveType::none => [0.0, 0.0, 0.0],
         }

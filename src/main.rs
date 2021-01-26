@@ -24,7 +24,6 @@ use glob::glob;
 fn write_in_bg(file: File, rx: std::sync::mpsc::Receiver<String>) {
     thread::spawn(move || {
         for received in rx {
-            println!("Got {}", &received);
             writeln!(&file, "{}", &received).unwrap();
         }
     });
@@ -65,7 +64,11 @@ fn print_config_description() {
     println!("offset = {}     # first file i.e. log0.dat", c.offset);
     println!("beta = {}    # beta (determined from ednsty)", c.beta);
     println!(
-        "drivetype = \"{:?}\" # type of driving, can be \"xyplane\", \"uniaxial\", \"elliptic\" ",
+        "e = {}    # eccentricity (scale of y-drive if drivetype=\"xyelliptic\")",
+        c.beta
+    );
+    println!(
+        "drivetype = \"{:?}\" # type of driving, can be \"xyplane\", \"uniaxial\", \"xyelliptic\" ",
         c.drive
     );
 }

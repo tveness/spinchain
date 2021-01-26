@@ -53,6 +53,7 @@ pub struct Config {
     /// Inverse temperature for Monte Carlo
     pub beta: f64,
     pub mc_points: usize,
+    pub e: f64,
     pub drive: DriveType,
 }
 
@@ -77,6 +78,7 @@ impl Default for Config {
             file: "log".to_string(),
             strob: false,
             beta: 2.88,
+            e: 0.9,
             mc_points: 1000,
             offset: 0,
             drive: DriveType::xyplane,
