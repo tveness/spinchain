@@ -241,7 +241,10 @@ fn run_tau(taus: Vec<f64>, steps: u32, conf: &mut Config) {
     for (i, tau) in taus.iter().enumerate() {
         let mut spin_chain: SpinChain = SpinChain::new(conf.clone(), i + conf.offset as usize);
         spin_chain.vars.tau = *tau;
-        spin_chain.vars.dt = spin_chain.vars.tau / 100.0;
+        spin_chain.vars.dt = match spin_chain.vars.tau {
+            x if x < 10.0 => spin_chain.vars.tau / 100.0,
+            _ => 0.1,
+        };
         spin_chain.vars.t = steps as f64 * spin_chain.vars.tau;
 
         // Initialise at a particular temperature, say T=1
