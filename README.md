@@ -104,6 +104,6 @@ Plots here for beta = 2.89, and B-field = [1.0,0.0,0.0]
 
 # To do
 
-Write Monte Carlo for first order Magnus expansion result
+Modify Monte-Carlo to produce correct number of points, and deal with points < threads
 
 

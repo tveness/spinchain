@@ -436,15 +436,31 @@ fn average(conf: &mut Config) {
 }
 
 fn run_mc(conf: &mut Config) {
-    let file_log = OpenOptions::new()
+    let _file_log = OpenOptions::new()
         .create(true)
         .append(true)
         .open("mc.dat")
         .unwrap();
-    let file = File::create("mc_live.dat").unwrap();
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("mc_live.dat")
+        .unwrap();
+
+    let m = MultiProgress::new();
+
+    let sty = ProgressStyle::default_bar()
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
+        .progress_chars("#>-");
+    let threads = conf.threads;
+    let pool = ThreadPool::new(threads);
+    let (tx, rx) = mpsc::channel();
 
     let points: usize = conf.mc_points as usize;
-    // Gather 100 points
+    write_in_bg(file, rx);
+
+    // Create storage for the points
+    /*
     let mut e_vec: Vec<f64> = Vec::with_capacity(points);
     let mut es_vec: Vec<f64> = Vec::with_capacity(points);
     let mut mx_vec: Vec<f64> = Vec::with_capacity(points);
@@ -453,76 +469,47 @@ fn run_mc(conf: &mut Config) {
     let mut mxt_vec: Vec<f64> = Vec::with_capacity(points);
     let mut myt_vec: Vec<f64> = Vec::with_capacity(points);
     let mut mzt_vec: Vec<f64> = Vec::with_capacity(points);
+    */
 
-    let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
     println!("Running Monte-Carlo simulation");
-    println!("beta: {}", sc.vars.beta);
+    let t_points = points / threads;
 
-    let pb = ProgressBar::new(points as u64);
-    pb.set_style(
-        ProgressStyle::default_bar()
-            .template(
-                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
-            )
-            .progress_chars("#>-"),
-    );
+    for i in 0..threads {
+        let mut sc: SpinChain = SpinChain::new(conf.clone(), i);
+        let txc = mpsc::Sender::clone(&tx);
 
-    for i in 0..points {
-        for _ in 0..1e6 as usize {
-            sc.metropolis_update();
-        }
+        let pb = m.add(ProgressBar::new(t_points as u64));
+        pb.set_style(sty.clone());
 
-        let m: [f64; 3] = sc.m();
-        let mt: [f64; 3] = sc.m_tot();
-        let ms: [f64; 3] = [
-            m[0] / sc.vars.ssize as f64,
-            m[1] / sc.vars.ssize as f64,
-            m[2] / sc.vars.ssize as f64,
-        ];
-        let mst: [f64; 3] = [
-            mt[0] / sc.vars.hsize as f64,
-            mt[1] / sc.vars.hsize as f64,
-            mt[2] / sc.vars.hsize as f64,
-        ];
-        let e: f64 = sc.total_energy2();
-        let es: f64 = sc.system_energy();
-        e_vec.push(e);
-        es_vec.push(es);
-        mx_vec.push(ms[0]);
-        my_vec.push(ms[1]);
-        mz_vec.push(ms[2]);
-        mxt_vec.push(mst[0]);
-        myt_vec.push(mst[1]);
-        mzt_vec.push(mst[2]);
-        writeln!(&file, "{} {} {} {} {} {}", i, e, es, ms[0], ms[1], ms[2]).unwrap();
-        pb.inc(1);
+        pool.execute(move || {
+            for i in 0..t_points as usize {
+                for _ in 0..1e6 as usize {
+                    sc.metropolis_update();
+                }
+                let m: [f64; 3] = sc.m();
+                let mt: [f64; 3] = sc.m_tot();
+                let ms: [f64; 3] = [
+                    m[0] / sc.vars.ssize as f64,
+                    m[1] / sc.vars.ssize as f64,
+                    m[2] / sc.vars.ssize as f64,
+                ];
+                let _mst: [f64; 3] = [
+                    mt[0] / sc.vars.hsize as f64,
+                    mt[1] / sc.vars.hsize as f64,
+                    mt[2] / sc.vars.hsize as f64,
+                ];
+                let e: f64 = sc.total_energy2();
+                let es: f64 = sc.system_energy();
+
+                let formatted_string: String =
+                    format!("{} {} {} {} {}", e, es, ms[0], ms[1], ms[2]);
+                txc.send(formatted_string).unwrap();
+                pb.inc(1);
+            }
+            pb.finish_with_message("Done");
+        });
     }
-    pb.finish_with_message("Done");
-    println!("Average values");
-    let e_avg = e_vec.iter().sum::<f64>() / points as f64;
-    let es_avg = es_vec.iter().sum::<f64>() / points as f64;
-    let mx_avg = mx_vec.iter().sum::<f64>() / points as f64;
-    let my_avg = my_vec.iter().sum::<f64>() / points as f64;
-    let mz_avg = mz_vec.iter().sum::<f64>() / points as f64;
-    //    let mxt_avg = mxt_vec.iter().sum::<f64>() / points as f64;
-    //    let myt_avg = myt_vec.iter().sum::<f64>() / points as f64;
-    let mzt_avg = mzt_vec.iter().sum::<f64>() / points as f64;
-    writeln!(
-        &file_log,
-        "{} {} {} {} {}",
-        sc.vars.beta, e_avg, mx_avg, my_avg, mz_avg
-    )
-    .unwrap();
-    println!("e: {}", e_avg);
-    println!("es: {}", es_avg);
-    println!("mx: {}", mx_avg);
-    println!("my: {}", my_avg);
-    println!("mz: {}", mz_avg);
-    println!("e-omega mz: {}", e_avg - 2.0 * PI / (sc.vars.tau) * mzt_avg);
-    println!(
-        "es-omega mz: {}",
-        es_avg - 2.0 * PI / (sc.vars.tau) * mz_avg
-    );
+    m.join().unwrap();
 }
 
 fn main() {
