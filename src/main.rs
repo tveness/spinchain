@@ -452,8 +452,6 @@ fn run_mc(conf: &mut Config) {
     let sty = ProgressStyle::default_bar()
         .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
         .progress_chars("#>-");
-    let threads = conf.threads;
-    let pool = ThreadPool::new(threads);
     let (tx, rx) = mpsc::channel();
 
     let points: usize = conf.mc_points as usize;
@@ -472,17 +470,33 @@ fn run_mc(conf: &mut Config) {
     */
 
     println!("Running Monte-Carlo simulation");
-    let t_points = points / threads;
+
+    //What if points <= threads? Then generate 1 point per thread and truncate threads
+
+    let threads = match conf.threads {
+        _ if conf.threads >= points => points,
+        _ => conf.threads,
+    };
+
+    let pool = ThreadPool::new(threads);
+
+    let t_points: u32 = (points / threads) as u32;
 
     for i in 0..threads {
         let mut sc: SpinChain = SpinChain::new(conf.clone(), i);
         let txc = mpsc::Sender::clone(&tx);
 
+        //Make up points in last thread if not divisble
+        let t_points = match i {
+            _ if i == threads - 1 => t_points + (points as u32) - (threads as u32) * t_points,
+            _ => t_points,
+        };
+
         let pb = m.add(ProgressBar::new(t_points as u64));
         pb.set_style(sty.clone());
 
         pool.execute(move || {
-            for i in 0..t_points as usize {
+            for _ in 0..t_points as usize {
                 for _ in 0..1e6 as usize {
                     sc.metropolis_update();
                 }
