@@ -29,7 +29,7 @@ drawn from a separate normal distribution.
 
 ## Usage (output of `sc --help`)
 ```
-spinchain 0.1.23
+spinchain 0.1.26
 Thomas Veness <thomas.veness@nottingham.ac.uk>
 Run classical spin chain simulation
 
@@ -80,7 +80,9 @@ file = "log"   # pattern for log files i.e. log0.dat, log1.dat
 strob = false  # stroboscopic evaluation
 offset = 0     # first file i.e. log0.dat
 beta = 2.88    # beta (determined from ednsty)
-drivetype = "xyplane" # type of driving, can be "xyplane", "uniaxial", "elliptic" 
+e = 0.9    # eccentricity (scale of y-drive if drivetype="xyelliptic")
+drivetype = "xyplane" # type of driving, can be "xyplane", "uniaxial", "xyelliptic" 
+
 ```
 
 # Running the program
@@ -104,3 +106,7 @@ Plots here for beta = 2.89, and B-field = [1.0,0.0,0.0]
 
 # To do
 
+* Zwanzig book
+* Langevin dynamics / Fokker-Planck equation
+* Consider \Delta E (m \tau, L, \ell)
+* Document current research

@@ -65,7 +65,7 @@ fn print_config_description() {
     println!("beta = {}    # beta (determined from ednsty)", c.beta);
     println!(
         "e = {}    # eccentricity (scale of y-drive if drivetype=\"xyelliptic\")",
-        c.beta
+        c.e
     );
     println!(
         "drivetype = \"{:?}\" # type of driving, can be \"xyplane\", \"uniaxial\", \"xyelliptic\" ",
