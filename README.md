@@ -110,3 +110,5 @@ Plots here for beta = 2.89, and B-field = [1.0,0.0,0.0]
 * Langevin dynamics / Fokker-Planck equation
 * Consider \Delta E (m \tau, L, \ell)
 * Document current research
+* Vary m
+* Omega to 0, perturbation theory?
