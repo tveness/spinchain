@@ -4,10 +4,25 @@
 use super::*;
 use rand::Rng;
 use rand_distr::{Distribution, Normal, Uniform};
+#[allow(unused_imports)]
 use std::f64::consts::PI;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
+
+#[allow(unused_macros)]
+macro_rules! triplet {
+    ($( $x:expr),*) => {
+        {
+        [
+        0.0  $( + $x[0])*,
+        0.0  $( + $x[1])*,
+        0.0  $( + $x[2])*,
+        ]
+        }
+};
+
+}
 
 ///Cartesian direction
 pub enum Dir {

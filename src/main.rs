@@ -12,6 +12,7 @@ mod macros;
 
 mod spin;
 use self::spin::Spin;
+#[allow(unused_imports)]
 use std::f64::consts::PI;
 
 mod spinchain;
