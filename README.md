@@ -107,8 +107,10 @@ Plots here for beta = 2.89, and B-field = [1.0,0.0,0.0]
 # To do
 
 * Zwanzig book
-* Langevin dynamics / Fokker-Planck equation
 * Consider \Delta E (m \tau, L, \ell)
 * Document current research
 * Vary m
 * Omega to 0, perturbation theory?
+* Initialise in state with B on system = B(0): how does this effect equilibration?
+* Simulate Langevin dynamics directly
+* Hierarchy orf equations from Fokker-Planck?
