@@ -506,24 +506,28 @@ impl SpinChain {
     ///Calculate boundary term to test Fokker-Planck evolution
     pub fn boundary_term(&self) -> f64 {
         let ell: usize = self.vars.ssize as usize;
-        let s1sq: f64 = self.spins[0].dir.iter().fold(0.0,|acc,x| acc+x*x);
-        let slsq: f64 = self.spins[ell-1].dir.iter().fold(0.0,|acc,x| acc+x*x);
+        let s1sq: f64 = self.spins[0].dir.iter().fold(0.0, |acc, x| acc + x * x);
+        let slsq: f64 = self.spins[ell - 1]
+            .dir
+            .iter()
+            .fold(0.0, |acc, x| acc + x * x);
         let h_e: [f64; 3] = self.h_ext(self.t);
 
         //Use macro to do these things later, for now just use vec
-        let om_1: Vec<f64> = (0..3).map(|x| self.j_couple[0][x]*self.spins[1].dir[x] - h_e[x]).collect();
-        let om_ell: Vec<f64> = (0..3).map(|x| self.j_couple[ell-2][x]*self.spins[ell-2].dir[x] - h_e[x]).collect();
+        let om_1: Vec<f64> = (0..3)
+            .map(|x| self.j_couple[0][x] * self.spins[1].dir[x] - h_e[x])
+            .collect();
+        let om_ell: Vec<f64> = (0..3)
+            .map(|x| self.j_couple[ell - 2][x] * self.spins[ell - 2].dir[x] - h_e[x])
+            .collect();
 
-        let om_1_sq: f64 = om_1.iter().fold(0.0,|acc,x| acc+x*x);
-        let om_ell_sq: f64 = om_ell.iter().fold(0.0,|acc,x| acc+x*x);
-        let oms1: f64 = (0..3).fold(0.0,|acc,x| acc + om_1[x]*self.spins[0].dir[x]);
-        let omsell: f64 = (0..3).fold(0.0,|acc,x| acc + om_ell[x]*self.spins[ell-1].dir[x]);
+        let om_1_sq: f64 = om_1.iter().fold(0.0, |acc, x| acc + x * x);
+        let om_ell_sq: f64 = om_ell.iter().fold(0.0, |acc, x| acc + x * x);
+        let oms1: f64 = (0..3).fold(0.0, |acc, x| acc + om_1[x] * self.spins[0].dir[x]);
+        let omsell: f64 = (0..3).fold(0.0, |acc, x| acc + om_ell[x] * self.spins[ell - 1].dir[x]);
 
-        s1sq*om_1_sq - oms1*oms1 + slsq*om_ell_sq - omsell*omsell
-
-
+        s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell
     }
-
 
     ///Calculate the energy of just the system proper, ignore boundary terms
     pub fn system_energy(&self) -> f64 {

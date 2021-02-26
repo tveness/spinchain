@@ -425,14 +425,15 @@ fn average(conf: &mut Config) {
         //Can this be done better?
         writeln!(
             &ofile,
-            "{} {} {} {} {} {} {}",
+            "{} {} {} {} {} {} {} {}",
             item[0] / avg_nums[i],
             item[1] / avg_nums[i],
             item[2] / avg_nums[i],
             item[3] / avg_nums[i],
             item[4] / avg_nums[i],
             item[5] / avg_nums[i],
-            item[6] / avg_nums[i]
+            item[6] / avg_nums[i],
+            item[7] / avg_nums[i],
         )
         .unwrap();
     }
