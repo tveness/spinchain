@@ -506,7 +506,11 @@ impl SpinChain {
     ///Calculate boundary term to test Fokker-Planck evolution
     pub fn boundary_term(&self) -> f64 {
         let ell: usize = self.vars.ssize as usize;
+
+        // |S_1|^2
         let s1sq: f64 = self.spins[0].dir.iter().fold(0.0, |acc, x| acc + x * x);
+
+        // |S_\ell|^2
         let slsq: f64 = self.spins[ell - 1]
             .dir
             .iter()
@@ -514,9 +518,13 @@ impl SpinChain {
         let h_e: [f64; 3] = self.h_ext(self.t);
 
         //Use macro to do these things later, for now just use vec
+        //\Omega_1 = J_1 S_2 - B(t)
+
         let om_1: Vec<f64> = (0..3)
             .map(|x| self.j_couple[0][x] * self.spins[1].dir[x] - h_e[x])
             .collect();
+
+        //\Omega_\ell = J_{\ell-1} S_{\ell-1} - B(t)
         let om_ell: Vec<f64> = (0..3)
             .map(|x| self.j_couple[ell - 2][x] * self.spins[ell - 2].dir[x] - h_e[x])
             .collect();
