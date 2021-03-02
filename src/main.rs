@@ -18,6 +18,9 @@ use std::f64::consts::PI;
 mod spinchain;
 use self::spinchain::SpinChain;
 
+mod spinchain_langevin;
+use self::spinchain_langevin::SpinChainLangevin;
+
 use clap::{crate_version, App, Arg};
 
 use glob::glob;
@@ -296,6 +299,69 @@ fn run_tau(taus: Vec<f64>, steps: u32, conf: &mut Config) {
     m.join().unwrap();
 }
 
+fn run_langevin(conf: &mut Config, gamma: f64) {
+    let m = MultiProgress::new();
+    let sty = ProgressStyle::default_bar()
+        .template(
+            "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] t={pos}/{len} ({eta}) {msg}",
+        )
+        .progress_chars("#>-");
+
+    let threads = conf.threads;
+    let num: usize = conf.runs as usize;
+    let pool = ThreadPool::new(threads);
+
+    println!("Energy density: {}", conf.ednsty);
+    println!("Effective temperature: {}", conf.beta);
+
+    for i in 0..num {
+        let mut spin_chain = SpinChainLangevin::new(conf.clone(), i + conf.offset as usize, gamma);
+
+        // Initialise at a particular temperature, say T=1
+
+        let pb = m.add(ProgressBar::new(spin_chain.vars.t as u64));
+        pb.set_style(sty.clone());
+
+        pool.execute(move || {
+            pb.set_message(&format!("Run {}", i));
+
+            for _ in 0..2e7 as usize {
+                spin_chain.metropolis_update();
+            }
+            pb.reset_eta();
+            let tau_steps: u64 = (spin_chain.vars.tau / spin_chain.vars.dt) as u64;
+
+            spin_chain.log();
+
+            while spin_chain.t < spin_chain.vars.t {
+                spin_chain.update();
+
+                if spin_chain.vars.strob {
+                    if ((spin_chain.t / spin_chain.vars.dt) as u64).rem_euclid(tau_steps) == 0 {
+                        spin_chain.log();
+                    }
+                } else {
+                    spin_chain.log();
+                }
+
+                if spin_chain.t.fract() < spin_chain.vars.dt {
+                    pb.set_position(spin_chain.t as u64);
+                }
+            }
+            pb.finish_and_clear();
+            //            pb.finish_with_message(&format!("Done {}",i));
+        });
+    }
+
+    //    m.join_and_clear().unwrap();
+    m.join().unwrap();
+
+    //Update config
+    conf.offset += num as u32;
+    fs::write("config.toml", toml::to_string(&conf).unwrap()).unwrap();
+    println!("Finished {} runs", num);
+}
+
 fn run_sim(conf: &mut Config) {
     let m = MultiProgress::new();
     let sty = ProgressStyle::default_bar()
@@ -568,6 +634,15 @@ fn main() {
             .help("Generate histograms via Monte-Carlo (hist_mc.dat) and via time-evolution (hist_dyn.dat)"),
             )
         .arg(
+            Arg::with_name("langevin")
+            .short("l")
+            .value_name("GAMMA")
+            .long("langevin")
+            .takes_value(true)
+            .default_value("1.0")
+            .help("Directly simulate Langevin dynamics on the system proper"),
+            )
+        .arg(
             Arg::with_name("magnus-hist")
             .value_name("POINTS")
             .long("magnus-hist")
@@ -668,6 +743,25 @@ fn main() {
         }
         false => (),
     };
+
+    match matches.occurrences_of("langevin") {
+        0 => (),
+        _ => {
+            let gamma: f64 = matches
+                .value_of("langevin")
+                .unwrap()
+                .parse::<f64>()
+                .unwrap();
+            println!(
+                "Running Langevin dynamics on the system proper with gamma={}",
+                gamma
+            );
+            conf.hsize = conf.ssize;
+
+            run_langevin(&mut conf, gamma);
+            default = false;
+        }
+    }
 
     match default {
         true => run_sim(&mut conf),

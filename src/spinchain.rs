@@ -24,6 +24,27 @@ macro_rules! triplet {
 
 }
 
+macro_rules! sq {
+    ($( $x:expr),*) => {
+        {
+            0.0 $(+$x.iter().fold(0.0, |acc, i| acc+i*i))*
+        }
+    };
+}
+
+macro_rules! dot {
+    ($( $x:expr),*) => {
+        {
+            1.0 $(* $x[0])*
+                +
+            1.0 $(* $x[1])*
+            +
+            1.0 $(* $x[2])*
+
+        }
+    };
+}
+
 ///Cartesian direction
 pub enum Dir {
     X,
@@ -523,13 +544,11 @@ impl SpinChain {
         let ell: usize = self.vars.ssize as usize;
 
         // |S_1|^2
-        let s1sq: f64 = self.spins[0].dir.iter().fold(0.0, |acc, x| acc + x * x);
+        let s1sq: f64 = sq!(self.spins[0].dir);
 
         // |S_\ell|^2
-        let slsq: f64 = self.spins[ell - 1]
-            .dir
-            .iter()
-            .fold(0.0, |acc, x| acc + x * x);
+        let slsq: f64 = sq!(self.spins[ell - 1].dir);
+
         let h_e: [f64; 3] = self.h_ext(self.t);
 
         //Use macro to do these things later, for now just use vec
@@ -538,18 +557,50 @@ impl SpinChain {
         let om_1: Vec<f64> = (0..3)
             .map(|x| self.j_couple[0][x] * self.spins[1].dir[x] - h_e[x])
             .collect();
+        let om_1_sq: f64 = sq!(om_1);
+        let oms1: f64 = dot!(om_1, self.spins[0].dir);
 
         //\Omega_\ell = J_{\ell-1} S_{\ell-1} - B(t)
         let om_ell: Vec<f64> = (0..3)
             .map(|x| self.j_couple[ell - 2][x] * self.spins[ell - 2].dir[x] - h_e[x])
             .collect();
+        let om_ell_sq: f64 = sq!(om_ell);
+        let omsell: f64 = dot!(om_ell, self.spins[ell - 1].dir);
 
-        let om_1_sq: f64 = om_1.iter().fold(0.0, |acc, x| acc + x * x);
-        let om_ell_sq: f64 = om_ell.iter().fold(0.0, |acc, x| acc + x * x);
-        let oms1: f64 = (0..3).fold(0.0, |acc, x| acc + om_1[x] * self.spins[0].dir[x]);
-        let omsell: f64 = (0..3).fold(0.0, |acc, x| acc + om_ell[x] * self.spins[ell - 1].dir[x]);
+        let m: [f64; 3] = self.m();
+        let h_ep: [f64; 3] = self.h_extp(self.t);
 
         s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell
+            +  dot!(h_ep,m)
+    }
+
+    ///Calculate the driving field derivative at the current time
+    fn h_extp(&self, t: f64) -> [f64; 3] {
+        //            return vec![0.0, 0.0, 0.0];
+        //        if t < 0.0 {
+        //            return [0.0, 0.0, 0.0];
+        //        }
+        match self.vars.drive {
+            DriveType::xyplane => {
+                let pi = std::f64::consts::PI;
+                let phi: f64 = 2.0 * pi * t / self.vars.tau;
+
+                [-phi.sin(), phi.cos(), 0.0]
+            }
+            DriveType::uniaxial => {
+                let pi = std::f64::consts::PI;
+                let phi: f64 = 2.0 * pi * t / self.vars.tau;
+
+                [-phi.sin(), 0.0, 0.0]
+            }
+            DriveType::xyelliptic => {
+                let pi = std::f64::consts::PI;
+                let phi: f64 = 2.0 * pi * t / self.vars.tau;
+
+                [-phi.sin(), self.vars.e * phi.cos(), 0.0]
+            }
+            DriveType::none => [0.0, 0.0, 0.0],
+        }
     }
 
     ///Calculate the energy of just the system proper, ignore boundary terms
