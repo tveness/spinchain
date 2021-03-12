@@ -772,7 +772,11 @@ impl SpinChainLangevin {
         //Do n=0 explicitly
         {
             let s_bar: Spin = self.spins[0].clone();
-            let h_e: [f64; 3] = [h[0][0] + h_l[0], h[0][1] + h_l[1], h[0][2] + h_l[2]];
+            let h_e: [f64; 3] = [
+                h[0][0] + h_l[0] / self.vars.dt,
+                h[0][1] + h_l[1] / self.vars.dt,
+                h[0][2] + h_l[2] / self.vars.dt,
+            ];
             let omega_bare: [f64; 3] = Self::j_s(&self.j_couple[0], &self.spins[1]);
 
             let llg: [f64; 3] = Self::cross(&self.spins[0].dir, &omega_bare, self.gamma);
@@ -803,9 +807,9 @@ impl SpinChainLangevin {
         //Do last site explicitly
         {
             let h_e: [f64; 3] = [
-                h[2 * (l - 1) + 1][0] + h_r[0],
-                h[2 * (l - 1) + 1][1] + h_r[1],
-                h[2 * (l - 1) + 1][2] + h_r[2],
+                h[2 * (l - 1) + 1][0] + h_r[0] / self.vars.dt,
+                h[2 * (l - 1) + 1][1] + h_r[1] / self.vars.dt,
+                h[2 * (l - 1) + 1][2] + h_r[2] / self.vars.dt,
             ];
             let omega_bare: [f64; 3] =
                 Self::j_s(&self.j_couple[2 * (l - 1)], &self.spins[2 * (l - 1)]);
