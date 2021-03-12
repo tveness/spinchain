@@ -705,7 +705,7 @@ impl SpinChainLangevin {
                 _ => *item,
             })
             .collect();
-        let h_normal = Normal::new(0.0, 2.0 * self.gamma / self.vars.beta / self.vars.dt ).unwrap();
+        let h_normal = Normal::new(0.0, 2.0 * self.gamma *  self.vars.dt / self.vars.beta  ).unwrap();
         let mut r = rand::thread_rng();
         let h_l: [f64; 3] = [
             h_normal.sample(&mut r),
@@ -720,7 +720,9 @@ impl SpinChainLangevin {
 
 
         self.rotate_even(&self.even_omega(&h, self.vars.dt / 2.0, &h_l), self.vars.dt / 2.0);
+
         self.rotate_odd(&self.odd_omega(&h, self.vars.dt / 2.0, &h_r), self.vars.dt);
+
         self.rotate_even(&self.even_omega(&h, self.vars.dt / 2.0, &h_l), self.vars.dt / 2.0);
 
         self.t += self.vars.dt;
@@ -764,6 +766,7 @@ impl SpinChainLangevin {
         // J_{2n-1} S_{2n-1} + J_{2n} S_{2n+1} - B
         //Do n=0 explicitly
         {
+            let s_bar: Spin = self.spins[0].clone();
             let h_e: [f64; 3] = [
                 h[0][0] + h_l[0],
                 h[0][1] + h_l[1],
