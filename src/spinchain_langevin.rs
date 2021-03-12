@@ -565,8 +565,8 @@ impl SpinChainLangevin {
         let m: [f64; 3] = self.m();
         let h_ep: [f64; 3] = self.h_extp(self.t);
 
-        self.gamma*(s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell)
-            +  dot!(h_ep,m)
+        self.gamma * (s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell)
+            + dot!(h_ep, m)
     }
 
     ///Calculate the energy of just the system proper, ignore boundary terms
@@ -705,7 +705,7 @@ impl SpinChainLangevin {
                 _ => *item,
             })
             .collect();
-        let h_normal = Normal::new(0.0, 2.0 * self.gamma *  self.vars.dt / self.vars.beta  ).unwrap();
+        let h_normal = Normal::new(0.0, 2.0 * self.gamma * self.vars.dt / self.vars.beta).unwrap();
         let mut r = rand::thread_rng();
         let h_l: [f64; 3] = [
             h_normal.sample(&mut r),
@@ -718,12 +718,17 @@ impl SpinChainLangevin {
             h_normal.sample(&mut r),
         ];
 
-
-        self.rotate_even(&self.even_omega(&h, self.vars.dt / 2.0, &h_l), self.vars.dt / 2.0);
+        self.rotate_even(
+            &self.even_omega(&h, self.vars.dt / 2.0, &h_l),
+            self.vars.dt / 2.0,
+        );
 
         self.rotate_odd(&self.odd_omega(&h, self.vars.dt / 2.0, &h_r), self.vars.dt);
 
-        self.rotate_even(&self.even_omega(&h, self.vars.dt / 2.0, &h_l), self.vars.dt / 2.0);
+        self.rotate_even(
+            &self.even_omega(&h, self.vars.dt / 2.0, &h_l),
+            self.vars.dt / 2.0,
+        );
 
         self.t += self.vars.dt;
     }
@@ -760,18 +765,14 @@ impl SpinChainLangevin {
         ]
     }
 
-    fn even_omega(&self, h: &[[f64; 3]], delta_t: f64, h_l: &[f64;3]) -> Vec<[f64; 3]> {
+    fn even_omega(&self, h: &[[f64; 3]], delta_t: f64, h_l: &[f64; 3]) -> Vec<[f64; 3]> {
         let l: usize = self.spins.len() as usize / 2;
         let mut result: Vec<[f64; 3]> = Vec::with_capacity(l);
         // J_{2n-1} S_{2n-1} + J_{2n} S_{2n+1} - B
         //Do n=0 explicitly
         {
             let s_bar: Spin = self.spins[0].clone();
-            let h_e: [f64; 3] = [
-                h[0][0] + h_l[0],
-                h[0][1] + h_l[1],
-                h[0][2] + h_l[2]
-            ];
+            let h_e: [f64; 3] = [h[0][0] + h_l[0], h[0][1] + h_l[1], h[0][2] + h_l[2]];
             let omega_bare: [f64; 3] = Self::j_s(&self.j_couple[0], &self.spins[1]);
 
             let llg: [f64; 3] = Self::cross(&self.spins[0].dir, &omega_bare, self.gamma);
@@ -788,7 +789,7 @@ impl SpinChainLangevin {
 
         result
     }
-    fn odd_omega(&self, h: &[[f64; 3]], delta_t: f64, h_r: &[f64;3]) -> Vec<[f64; 3]> {
+    fn odd_omega(&self, h: &[[f64; 3]], delta_t: f64, h_r: &[f64; 3]) -> Vec<[f64; 3]> {
         let l: usize = self.spins.len() as usize / 2;
         let mut result: Vec<[f64; 3]> = Vec::with_capacity(l);
         // J_{2n} S_{2n} + J_{2n+1} S_{2n+2}
@@ -801,7 +802,6 @@ impl SpinChainLangevin {
         }
         //Do last site explicitly
         {
-
             let h_e: [f64; 3] = [
                 h[2 * (l - 1) + 1][0] + h_r[0],
                 h[2 * (l - 1) + 1][1] + h_r[1],

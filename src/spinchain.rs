@@ -570,8 +570,7 @@ impl SpinChain {
         let m: [f64; 3] = self.m();
         let h_ep: [f64; 3] = self.h_extp(self.t);
 
-        s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell
-            +  dot!(h_ep,m)
+        s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell + dot!(h_ep, m)
     }
 
     ///Calculate the driving field derivative at the current time
