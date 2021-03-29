@@ -209,7 +209,7 @@ impl SpinChainLangevin {
         let s: usize = self.vars.hsize as usize;
         let index: usize = rng.gen_range(0, s) as usize;
 
-        let local_field: [f64; 3] = self.static_h[index];
+        let local_field: [f64; 3] = self.h_ext(0.0);
 
         //Calculate initial energy
         //First get left and right spins and couplings
@@ -565,8 +565,9 @@ impl SpinChainLangevin {
         let m: [f64; 3] = self.m();
         let h_ep: [f64; 3] = self.h_extp(self.t);
 
-        self.gamma * (s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell)
-            + dot!(h_ep, m)
+        2.0*self.gamma/(self.vars.beta) * (oms1 + omsell)
+        -self.gamma * (s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell)
+            + 2.0 * PI * dot!(h_ep, m) / self.vars.tau
     }
 
     ///Calculate the energy of just the system proper, ignore boundary terms
@@ -595,32 +596,29 @@ impl SpinChainLangevin {
         e / (s - 1) as f64
     }
 
-    ///Calculate the magnetisation in direction ```Dir``` for the system proper
+    ///Calculate the magnetisation in each direction for the system proper
     pub fn m(&self) -> [f64; 3] {
         //Determine spins
         let s: usize = self.vars.ssize as usize;
         let spins = self.spins[..s].iter();
 
         //Now calculate magnetisation for this class of spins
-        let result: [f64; 3] = self.spins[..s as usize]
-            .iter()
-            .fold([0.0, 0.0, 0.0], |acc, x| {
-                [acc[0] + x.dir[0], acc[1] + x.dir[1], acc[2] + x.dir[2]]
-            });
+        let result: [f64; 3] = spins.fold([0.0, 0.0, 0.0], |acc, x| {
+            [acc[0] + x.dir[0], acc[1] + x.dir[1], acc[2] + x.dir[2]]
+        });
         result
     }
 
+    ///Calculate the magnetisation in each direction for the entire proper
     pub fn m_tot(&self) -> [f64; 3] {
         //Determine spins
         let s: usize = self.vars.hsize as usize;
         let spins = self.spins.iter();
 
         //Now calculate magnetisation for this class of spins
-        let result: [f64; 3] = self.spins[..s as usize]
-            .iter()
-            .fold([0.0, 0.0, 0.0], |acc, x| {
-                [acc[0] + x.dir[0], acc[1] + x.dir[1], acc[2] + x.dir[2]]
-            });
+        let result: [f64; 3] = spins.fold([0.0, 0.0, 0.0], |acc, x| {
+            [acc[0] + x.dir[0], acc[1] + x.dir[1], acc[2] + x.dir[2]]
+        });
         result
     }
 
@@ -705,7 +703,10 @@ impl SpinChainLangevin {
                 _ => *item,
             })
             .collect();
-        let h_normal = Normal::new(0.0, 2.0 * self.gamma * self.vars.dt / self.vars.beta).unwrap();
+        //Normal::new(mean, standard deviation)
+        let sigma: f64 = (2.0 * self.gamma * self.vars.dt / self.vars.beta).sqrt();
+        let h_normal = Normal::new(0.0, sigma).unwrap();
+        //        let h_normal_half = Normal::new(0.0, self.gamma * self.vars.dt / self.vars.beta).unwrap();
         let mut r = rand::thread_rng();
         let h_l: [f64; 3] = [
             h_normal.sample(&mut r),
@@ -717,6 +718,9 @@ impl SpinChainLangevin {
             h_normal.sample(&mut r),
             h_normal.sample(&mut r),
         ];
+
+        //let h_l: [f64;3] = [0.0,0.0,0.0];
+        //let h_r: [f64;3] = [0.0,0.0,0.0];
 
         self.rotate_even(
             &self.even_omega(&h, self.vars.dt / 2.0, &h_l),
@@ -771,17 +775,25 @@ impl SpinChainLangevin {
         // J_{2n-1} S_{2n-1} + J_{2n} S_{2n+1} - B
         //Do n=0 explicitly
         {
-            let s_bar: Spin = self.spins[0].clone();
-            let h_e: [f64; 3] = [
-                h[0][0] + h_l[0] / self.vars.dt,
-                h[0][1] + h_l[1] / self.vars.dt,
-                h[0][2] + h_l[2] / self.vars.dt,
+            let dh: [f64; 3] = [
+                h_l[0] / self.vars.dt,
+                h_l[1] / self.vars.dt,
+                h_l[2] / self.vars.dt,
             ];
-            let omega_bare: [f64; 3] = Self::j_s(&self.j_couple[0], &self.spins[1]);
 
-            let llg: [f64; 3] = Self::cross(&self.spins[0].dir, &omega_bare, self.gamma);
+            //Omega_bare = j0.s1 - B(t)
 
-            result.push(Self::ssh_sum(&omega_bare, &llg, &h_e));
+            let omega_bare: Vec<f64> = Self::j_s(&self.j_couple[0], &self.spins[1])
+                .iter()
+                .zip(h[0].iter())
+                .map(|(x, y)| x - y)
+                .collect();
+
+            //Landu-Lifshitz-Gilbert term
+            let llg: [f64; 3] = Self::cross(&self.spins[0].dir, &omega_bare, -self.gamma);
+            //            let llg: [f64; 3] = [0.0,0.0,0.0];
+
+            result.push(Self::ssh_sum(&omega_bare, &llg, &dh));
         }
 
         for n in 1..l {
@@ -806,17 +818,22 @@ impl SpinChainLangevin {
         }
         //Do last site explicitly
         {
-            let h_e: [f64; 3] = [
-                h[2 * (l - 1) + 1][0] + h_r[0] / self.vars.dt,
-                h[2 * (l - 1) + 1][1] + h_r[1] / self.vars.dt,
-                h[2 * (l - 1) + 1][2] + h_r[2] / self.vars.dt,
+            let dh: [f64; 3] = [
+                h_r[0] / self.vars.dt,
+                h_r[1] / self.vars.dt,
+                h_r[2] / self.vars.dt,
             ];
-            let omega_bare: [f64; 3] =
-                Self::j_s(&self.j_couple[2 * (l - 1)], &self.spins[2 * (l - 1)]);
+            let omega_bare: Vec<f64> =
+                Self::j_s(&self.j_couple[2 * (l - 1)], &self.spins[2 * (l - 1)])
+                    .iter()
+                    .zip(h[2 * (l - 1) + 1].iter())
+                    .map(|(x, y)| x - y)
+                    .collect();
 
-            let llg: [f64; 3] = Self::cross(&self.spins[0].dir, &omega_bare, self.gamma);
+            let llg: [f64; 3] =
+                Self::cross(&self.spins[2 * (l - 1) + 1].dir, &omega_bare, -self.gamma);
 
-            result.push(Self::ssh_sum(&omega_bare, &llg, &h_e));
+            result.push(Self::ssh_sum(&omega_bare, &llg, &dh));
         }
 
         result

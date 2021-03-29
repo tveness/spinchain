@@ -214,9 +214,13 @@ impl SpinChain {
 
         // Select a spin at random from the chain
         let s: usize = self.vars.hsize as usize;
+        let ss: usize = self.vars.ssize as usize;
         let index: usize = rng.gen_range(0, s) as usize;
 
-        let local_field: [f64; 3] = self.static_h[index];
+//        let local_field: [f64; 3] = self.static_h[index];
+        let local_field: [f64; 3] = match index {
+            _ if index < ss => self.h_ext(0.0),
+            _ => self.static_h[index] };
 
         //Calculate initial energy
         //First get left and right spins and couplings
@@ -570,7 +574,8 @@ impl SpinChain {
         let m: [f64; 3] = self.m();
         let h_ep: [f64; 3] = self.h_extp(self.t);
 
-        s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell + dot!(h_ep, m)
+        2.0/(self.vars.beta) * (oms1 + omsell)
+        -(s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell)
     }
 
     ///Calculate the driving field derivative at the current time
