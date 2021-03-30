@@ -217,10 +217,11 @@ impl SpinChain {
         let ss: usize = self.vars.ssize as usize;
         let index: usize = rng.gen_range(0, s) as usize;
 
-//        let local_field: [f64; 3] = self.static_h[index];
+        //        let local_field: [f64; 3] = self.static_h[index];
         let local_field: [f64; 3] = match index {
             _ if index < ss => self.h_ext(0.0),
-            _ => self.static_h[index] };
+            _ => self.static_h[index],
+        };
 
         //Calculate initial energy
         //First get left and right spins and couplings
@@ -553,29 +554,29 @@ impl SpinChain {
         // |S_\ell|^2
         let slsq: f64 = sq!(self.spins[ell - 1].dir);
 
-        let h_e: [f64; 3] = self.h_ext(self.t);
+        let h_el: [f64; 3] = self.static_h[0];
+        let h_er: [f64; 3] = self.static_h[ell - 1];
 
         //Use macro to do these things later, for now just use vec
         //\Omega_1 = J_1 S_2 - B(t)
 
         let om_1: Vec<f64> = (0..3)
-            .map(|x| self.j_couple[0][x] * self.spins[1].dir[x] - h_e[x])
+            .map(|x| self.j_couple[0][x] * self.spins[1].dir[x] - h_el[x])
             .collect();
         let om_1_sq: f64 = sq!(om_1);
         let oms1: f64 = dot!(om_1, self.spins[0].dir);
 
         //\Omega_\ell = J_{\ell-1} S_{\ell-1} - B(t)
         let om_ell: Vec<f64> = (0..3)
-            .map(|x| self.j_couple[ell - 2][x] * self.spins[ell - 2].dir[x] - h_e[x])
+            .map(|x| self.j_couple[ell - 2][x] * self.spins[ell - 2].dir[x] - h_er[x])
             .collect();
         let om_ell_sq: f64 = sq!(om_ell);
         let omsell: f64 = dot!(om_ell, self.spins[ell - 1].dir);
 
         let m: [f64; 3] = self.m();
-        let h_ep: [f64; 3] = self.h_extp(self.t);
 
-        2.0/(self.vars.beta) * (oms1 + omsell)
-        -(s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell)
+        2.0 / (self.vars.beta) * (oms1 + omsell)
+            - (s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell)
     }
 
     ///Calculate the driving field derivative at the current time

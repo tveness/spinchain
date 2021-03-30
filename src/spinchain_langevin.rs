@@ -565,8 +565,8 @@ impl SpinChainLangevin {
         let m: [f64; 3] = self.m();
         let h_ep: [f64; 3] = self.h_extp(self.t);
 
-        2.0*self.gamma/(self.vars.beta) * (oms1 + omsell)
-        -self.gamma * (s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell)
+        2.0 * self.gamma / (self.vars.beta) * (oms1 + omsell)
+            - self.gamma * (s1sq * om_1_sq - oms1 * oms1 + slsq * om_ell_sq - omsell * omsell)
             + 2.0 * PI * dot!(h_ep, m) / self.vars.tau
     }
 
