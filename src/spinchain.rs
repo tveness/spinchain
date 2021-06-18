@@ -4,6 +4,7 @@
 use super::*;
 use rand::Rng;
 use rand_distr::{Distribution, Normal, Uniform};
+use rustfft::{num_complex::Complex, FftPlanner};
 #[allow(unused_imports)]
 use std::f64::consts::PI;
 use std::fs;
@@ -68,6 +69,8 @@ pub struct SpinChain {
     pub vars: Config,
     ///Log file
     file: std::fs::File,
+
+    pub spec_name: String,
 }
 
 impl SpinChain {
@@ -191,6 +194,8 @@ impl SpinChain {
             .collect();
         let conf_file_name: &str =
             &[conf.file.clone(), num.to_string(), ".dat".to_string()].join("");
+        let spec_name: String =
+            (&["spectrum-".to_string(), num.to_string(), "-t-".to_string()].join("")).to_string();
 
         //Log file
         let file = File::create(&conf_file_name).unwrap();
@@ -204,6 +209,7 @@ impl SpinChain {
             static_h,
             t: t0,
             file,
+            spec_name,
         }
     }
 
@@ -436,6 +442,101 @@ impl SpinChain {
             boundary_term
         )
         .unwrap();
+
+        let pi = std::f64::consts::PI;
+
+        if (pi * self.t / (100.0 * self.vars.tau)).sin().abs() < self.vars.dt / (20.0 * pi) {
+            self.log_fft();
+        }
+    }
+
+    //Returns vector populated with E(k) = cos(k) |\tilde{S}_k|^2, with k = 2 pi n /L for
+    //n=0,...,L-1. This is to examine energy cascades in the driven model
+    pub fn energy_spectrum(&self) -> Vec<f64> {
+        let pi = std::f64::consts::PI;
+        let l = self.vars.hsize as usize;
+        let k_range: Vec<f64> = (0..l)
+            .map(|x| { 2.0 * pi * (x as f64) / (l as f64) } - pi)
+            .collect();
+        let mut ek: Vec<f64> = vec![0.0; l];
+
+        let mut planner = FftPlanner::<f64>::new();
+        let fft = planner.plan_fft_forward(l);
+
+        //Do this for each spin
+        let mut x_buffer: Vec<Complex<f64>> = self
+            .spins
+            .iter()
+            .map(|x| Complex {
+                re: x.dir[0],
+                im: 0.0,
+            })
+            .collect();
+        let mut y_buffer: Vec<Complex<f64>> = self
+            .spins
+            .iter()
+            .map(|x| Complex {
+                re: x.dir[1],
+                im: 0.0,
+            })
+            .collect();
+        let mut z_buffer: Vec<Complex<f64>> = self
+            .spins
+            .iter()
+            .map(|x| Complex {
+                re: x.dir[2],
+                im: 0.0,
+            })
+            .collect();
+
+        fft.process(&mut x_buffer);
+        fft.process(&mut y_buffer);
+        fft.process(&mut z_buffer);
+
+        for i in (l / 2)..l {
+            let k = 2.0 * pi * (i as f64) / (l as f64);
+            ek[i - l / 2] = x_buffer[i].re * x_buffer[i].re
+                + x_buffer[i].im * x_buffer[i].im
+                + y_buffer[i].re * y_buffer[i].re
+                + y_buffer[i].im * y_buffer[i].im
+                + z_buffer[i].re * z_buffer[i].re
+                + z_buffer[i].im * z_buffer[i].im;
+        }
+
+        for i in 0..l / 2 {
+            let k = 2.0 * pi * (i as f64) / (l as f64);
+            ek[i + l / 2] = x_buffer[i].re * x_buffer[i].re
+                + x_buffer[i].im * x_buffer[i].im
+                + y_buffer[i].re * y_buffer[i].re
+                + y_buffer[i].im * y_buffer[i].im
+                + z_buffer[i].re * z_buffer[i].re
+                + z_buffer[i].im * z_buffer[i].im;
+        }
+
+        ek
+    }
+
+    pub fn log_fft(&self) {
+        let l = self.vars.hsize as usize;
+        let pi = std::f64::consts::PI;
+        let k_range: Vec<f64> = (0..l)
+            .map(|x| { 2.0 * pi * (x as f64) / (l as f64) } - pi)
+            .collect();
+        let ek: Vec<f64> = self.energy_spectrum();
+        let rounded_t: f64 = (self.t / self.vars.tau).round() * self.vars.tau;
+
+        let spec_name: &str = &[
+            self.spec_name.clone(),
+            rounded_t.to_string(),
+            ".dat".to_string(),
+        ]
+        .join("")
+        .to_string();
+
+        let file = File::create(&spec_name).unwrap();
+        for i in 0..l {
+            writeln!(&file, "{} {}", k_range[i], ek[i] / (self.vars.hsize as f64)).unwrap();
+        }
     }
 
     /// Returns the energy of two spins coupled with j i.e. spin1.j.spin2
