@@ -15,3 +15,4 @@ file = "log"
 strob = false
 offset = 8
 drive = "xyplane"
+log = false

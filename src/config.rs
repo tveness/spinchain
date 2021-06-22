@@ -55,6 +55,7 @@ pub struct Config {
     pub mc_points: usize,
     pub e: f64,
     pub drive: DriveType,
+    pub log: bool,
 }
 
 impl Default for Config {
@@ -82,6 +83,7 @@ impl Default for Config {
             mc_points: 1000,
             offset: 0,
             drive: DriveType::xyplane,
+            log: true,
         }
     }
 }

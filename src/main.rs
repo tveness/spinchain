@@ -135,6 +135,72 @@ fn gen_hist_magnus(conf: &mut Config, sample_num: usize) {
     println!("ed: {}", ed_avg / sample_num as f64);
 }
 
+fn gen_hist_dynamics(conf: &mut Config, sample_num: usize) {
+    let hist_name: String = format!("dyn-hist-t-{}.dat", conf.t);
+    let dyn_hist = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&hist_name)
+        .unwrap();
+
+    let (tx, rx) = mpsc::channel();
+    write_in_bg(dyn_hist, rx);
+    let m = MultiProgress::new();
+    let sty = ProgressStyle::default_bar()
+        .template(
+            "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] t={pos}/{len} ({eta}) {msg}",
+        )
+        .progress_chars("#>-");
+
+    let steps = (conf.t / conf.dt) as usize;
+    println!(
+        "Generating dynamics histogram for {} steps i.e. t={}",
+        steps,
+        (steps as f64) * conf.dt
+    );
+
+    let threads = match conf.threads {
+        _ if conf.threads >= sample_num => sample_num,
+        _ => conf.threads,
+    };
+
+    let pool = ThreadPool::new(threads);
+
+    let f = File::create("log0.dat").unwrap();
+
+    println!("Sample num: {}", sample_num);
+    for i in 0..sample_num {
+        let txc = mpsc::Sender::clone(&tx);
+        let pb = m.add(ProgressBar::new(steps as u64));
+        pb.set_style(sty.clone());
+
+        let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+        sc.file = f.try_clone().unwrap();
+
+        pool.execute(move || {
+            pb.set_message(&format!("run {i}", i = i));
+            //Do dynamical updates
+            pb.reset_eta();
+            for _ in 0..steps {
+                sc.update();
+                pb.set_position(sc.t as u64);
+            }
+
+            //Get a sample
+            let mx: f64 = sc.m()[0] / sc.vars.ssize as f64;
+            let my: f64 = sc.m()[1] / sc.vars.ssize as f64;
+            let mz: f64 = sc.m()[2] / sc.vars.ssize as f64;
+            let ed: f64 = sc.system_energy();
+
+            let formatted_string: String = format!("{} {} {} {} {}", i, mx, my, mz, ed);
+            txc.send(formatted_string).unwrap();
+
+            pb.finish_with_message("Done");
+        });
+    }
+    m.join().unwrap();
+}
+
 ///Generate ```sample_num``` samples via Monte Carlo and dynamical evolution to check that the
 ///system indeed thermalises via time-evolution
 fn gen_hist(conf: &mut Config, sample_num: usize) {
@@ -634,6 +700,15 @@ fn main() {
             .help("Generate histograms via Monte-Carlo (hist_mc.dat) and via time-evolution (hist_dyn.dat)"),
             )
         .arg(
+            Arg::with_name("dynhist")
+            .short("d")
+            .value_name("POINTS")
+            .long("dynamic-histogram")
+            .takes_value(true)
+            .default_value("1000")
+            .help("Generate time-evolution histogram (hist_dyn.dat)"),
+            )
+        .arg(
             Arg::with_name("langevin")
             .short("l")
             .value_name("GAMMA")
@@ -709,6 +784,10 @@ fn main() {
         Some(x) => x.parse::<usize>().unwrap(),
         None => 8000 as usize,
     };
+    let sample_num: usize = match matches.value_of("dynhist") {
+        Some(x) => x.parse::<usize>().unwrap(),
+        None => 1000 as usize,
+    };
 
     match matches.occurrences_of("magnus-hist") {
         0 => (),
@@ -725,6 +804,14 @@ fn main() {
             println!("Running hist");
             default = false;
             gen_hist(&mut conf, points);
+        }
+    }
+    match matches.occurrences_of("dynhist") {
+        0 => (),
+        _ => {
+            println!("Running dynamic hist");
+            default = false;
+            gen_hist_dynamics(&mut conf, sample_num);
         }
     }
 

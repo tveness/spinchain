@@ -68,7 +68,7 @@ pub struct SpinChain {
     ///Configuration variables for the system
     pub vars: Config,
     ///Log file
-    file: std::fs::File,
+    pub file: std::fs::File,
 
     pub spec_name: String,
 }
@@ -198,8 +198,14 @@ impl SpinChain {
             (&["spectrum-".to_string(), num.to_string(), "-t-".to_string()].join("")).to_string();
 
         //Log file
-        let file = File::create(&conf_file_name).unwrap();
-        writeln!(&file, "#t E_total E_sub M_x M_y M_z").unwrap();
+        let file = match conf.log {
+            true => File::create(&conf_file_name).unwrap(),
+            false => File::create("/dev/null").unwrap(),
+        };
+        match conf.log {
+            true => writeln!(&file, "#t E_total E_sub M_x M_y M_z").unwrap(),
+            false => (),
+        };
         let t0: f64 = -conf.trel;
 
         SpinChain {
