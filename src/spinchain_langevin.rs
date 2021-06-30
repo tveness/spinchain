@@ -647,6 +647,8 @@ impl SpinChainLangevin {
 
                 [phi.cos(), self.vars.e * phi.sin(), 0.0]
             }
+            DriveType::staticfield => [self.vars.hs[0], self.vars.hs[1], self.vars.hs[2]],
+
             DriveType::none => [0.0, 0.0, 0.0],
         }
     }
@@ -676,6 +678,7 @@ impl SpinChainLangevin {
 
                 [-phi.sin(), self.vars.e * phi.cos(), 0.0]
             }
+            DriveType::staticfield => [0.0, 0.0, 0.0],
             DriveType::none => [0.0, 0.0, 0.0],
         }
     }

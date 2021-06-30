@@ -135,6 +135,63 @@ fn gen_hist_magnus(conf: &mut Config, sample_num: usize) {
     println!("ed: {}", ed_avg / sample_num as f64);
 }
 
+fn gen_single_traj(conf: &mut Config, sample_num: usize) {
+    let hist_name: String = format!("hist-st-t-{}.dat", conf.t);
+
+    let dyn_hist = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&hist_name)
+        .unwrap();
+
+    //To do samples, run for 30 cycles to equilibrate
+    //Then sample every 10 cycles?
+    let final_t: f64 = (sample_num as f64 + 30.0) * conf.tau;
+    let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+
+    let pb = ProgressBar::new(final_t as u64);
+    let sty = ProgressStyle::default_bar()
+        .template(
+            "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] t={pos}/{len} ({eta}) {msg}",
+        )
+        .progress_chars("#>-");
+    pb.set_style(sty);
+
+    let init_steps = (10.0 * conf.tau / conf.dt) as usize;
+    let steps = (final_t / conf.dt) as usize;
+    println!(
+        "Generating dynamics histogram for {} steps i.e. t={}",
+        steps,
+        (steps as f64) * conf.dt
+    );
+    let mut step_count: u64 = 0;
+    let cycle_steps: u64 = (conf.tau / conf.dt) as u64;
+
+    println!("Sample num: {}", sample_num);
+    for _ in 0..init_steps {
+        sc.update();
+        pb.set_position(sc.t as u64);
+        step_count += 1;
+    }
+    while sc.t < final_t {
+        sc.update();
+        step_count += 1;
+
+        pb.set_position(sc.t as u64);
+        if step_count % cycle_steps == 0 {
+            //Get a sample
+            let mx: f64 = sc.m()[0] / sc.vars.ssize as f64;
+            let my: f64 = sc.m()[1] / sc.vars.ssize as f64;
+            let mz: f64 = sc.m()[2] / sc.vars.ssize as f64;
+            let ed: f64 = sc.system_energy();
+
+            let formatted_string: String = format!("{} {} {} {} {}", sc.t, mx, my, mz, ed);
+
+            writeln!(&dyn_hist, "{}", formatted_string).unwrap();
+        }
+    }
+}
+
 fn gen_hist_dynamics(conf: &mut Config, sample_num: usize) {
     let hist_name: String = format!("dyn-hist-t-{}.dat", conf.t);
     let dyn_hist = OpenOptions::new()
@@ -171,7 +228,7 @@ fn gen_hist_dynamics(conf: &mut Config, sample_num: usize) {
     println!("Sample num: {}", sample_num);
     for i in 0..sample_num {
         let txc = mpsc::Sender::clone(&tx);
-        let pb = m.add(ProgressBar::new(steps as u64));
+        let pb = m.add(ProgressBar::new(conf.t as u64));
         pb.set_style(sty.clone());
 
         let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
@@ -183,7 +240,9 @@ fn gen_hist_dynamics(conf: &mut Config, sample_num: usize) {
             pb.reset_eta();
             for _ in 0..steps {
                 sc.update();
-                pb.set_position(sc.t as u64);
+                if steps % 100 == 0 {
+                    pb.set_position(sc.t as u64);
+                }
             }
 
             //Get a sample
@@ -195,7 +254,7 @@ fn gen_hist_dynamics(conf: &mut Config, sample_num: usize) {
             let formatted_string: String = format!("{} {} {} {} {}", i, mx, my, mz, ed);
             txc.send(formatted_string).unwrap();
 
-            pb.finish_with_message("Done");
+            pb.finish_and_clear();
         });
     }
     m.join().unwrap();
@@ -573,11 +632,6 @@ fn average(conf: &mut Config) {
 }
 
 fn run_mc(conf: &mut Config) {
-    let _file_log = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open("mc.dat")
-        .unwrap();
     let file = OpenOptions::new()
         .create(true)
         .append(true)
@@ -650,7 +704,7 @@ fn run_mc(conf: &mut Config) {
                     mt[2] / sc.vars.hsize as f64,
                 ];
                 let e: f64 = sc.total_energy2();
-                let es: f64 = sc.system_energy();
+                let es: f64 = sc.mc_system_energy();
 
                 let formatted_string: String =
                     format!("{} {} {} {} {}", e, es, ms[0], ms[1], ms[2]);
@@ -707,6 +761,15 @@ fn main() {
             .takes_value(true)
             .default_value("1000")
             .help("Generate time-evolution histogram (hist_dyn.dat)"),
+            )
+        .arg(
+            Arg::with_name("singletraj")
+            .short("s")
+            .value_name("POINTS")
+            .long("single-trajectory")
+            .takes_value(true)
+            .default_value("1000")
+            .help("Generate time-evolution histogram (hist_sj.dat)"),
             )
         .arg(
             Arg::with_name("langevin")
@@ -788,6 +851,10 @@ fn main() {
         Some(x) => x.parse::<usize>().unwrap(),
         None => 1000 as usize,
     };
+    let single_samples: usize = match matches.value_of("singletraj") {
+        Some(x) => x.parse::<usize>().unwrap(),
+        None => 1000 as usize,
+    };
 
     match matches.occurrences_of("magnus-hist") {
         0 => (),
@@ -812,6 +879,15 @@ fn main() {
             println!("Running dynamic hist");
             default = false;
             gen_hist_dynamics(&mut conf, sample_num);
+        }
+    }
+
+    match matches.occurrences_of("singletraj") {
+        0 => (),
+        _ => {
+            println!("Running single trajectory");
+            default = false;
+            gen_single_traj(&mut conf, single_samples);
         }
     }
 

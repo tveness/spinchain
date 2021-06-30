@@ -711,6 +711,7 @@ impl SpinChain {
 
                 [-phi.sin(), self.vars.e * phi.cos(), 0.0]
             }
+            DriveType::staticfield => [0.0, 0.0, 0.0],
             DriveType::none => [0.0, 0.0, 0.0],
         }
     }
@@ -739,6 +740,31 @@ impl SpinChain {
         }
 
         e / (s - 1) as f64
+    }
+
+    pub fn mc_system_energy(&self) -> f64 {
+        //Size is ssize
+        let s: usize = self.vars.ssize as usize;
+
+        //
+        let mut e: f64 = 0.0;
+
+        //Get energy of magnetic field terms
+        let h_e: [f64; 3] = self.h_ext(0.0);
+
+        for i in 0..s - 1 {
+            for k in 0..3 {
+                e -= self.spins[i].dir[k] * self.j_couple[i][k] * self.spins[i + 1].dir[k];
+                e += self.spins[i].dir[k] * h_e[k];
+            }
+        }
+
+        for k in 0..3 {
+            e -= self.spins[s - 1].dir[k] * self.j_couple[s - 1][k] * self.spins[0].dir[k];
+            e += self.spins[s - 1].dir[k] * h_e[k];
+        }
+
+        e / (s as f64)
     }
 
     ///Calculate the magnetisation in direction ```Dir``` for the system proper
@@ -795,6 +821,8 @@ impl SpinChain {
 
                 [phi.cos(), self.vars.e * phi.sin(), 0.0]
             }
+            DriveType::staticfield => [self.vars.hs[0], self.vars.hs[1], self.vars.hs[2]],
+
             DriveType::none => [0.0, 0.0, 0.0],
         }
     }

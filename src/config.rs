@@ -7,6 +7,7 @@ pub enum DriveType {
     xyplane,
     xyelliptic,
     uniaxial,
+    staticfield,
     none,
 }
 
