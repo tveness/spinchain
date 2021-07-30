@@ -77,6 +77,64 @@ fn print_config_description() {
     );
 }
 
+fn estim_e(conf: &mut Config, beta: f64) -> f64 {
+    let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+
+    sc.vars.beta = beta;
+    let samples: usize = 1000;
+    let mut e_samples: Vec<f64> = vec![0.0; samples];
+    let omega: f64 = 2.0 * PI / conf.tau;
+
+    for i in 0..samples {
+        for _ in 0..1000 {
+            sc.metropolis_update();
+        }
+        e_samples[i] = sc.system_energy(); //+omega*sc.m()[2]/sc.vars.ssize as f64;
+    }
+
+    //    println!("{:?}", e_samples);
+    e_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64)
+}
+
+fn find_beta(conf: &mut Config) -> f64 {
+    let e_target = conf.ednsty;
+    let mut beta_low: f64 = 0.1;
+    let mut beta_high: f64 = 5.0;
+    let mut beta_mid: f64 = 0.5 * (beta_low + beta_high);
+    //    println!("Target? {}", estim_e(conf,2.88));
+
+    let mut e_low = estim_e(conf, beta_low);
+    let mut e_mid = estim_e(conf, beta_mid);
+    let mut e_high = estim_e(conf, beta_high);
+    println!("Target: {}", e_target);
+
+    println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
+    println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
+    while beta_high - beta_low > 0.01 {
+        //If middle energy is too high, then beta_mid is too low (i.e. beta_mid is hot)
+        if e_mid > e_target {
+            beta_low = beta_mid;
+            e_low = e_mid;
+
+            beta_mid = 0.5 * (beta_low + beta_high);
+            e_mid = estim_e(conf, beta_mid);
+        }
+        //Otherwise, energy is too low, increase temp i.e. lower beta_high
+        else {
+            beta_high = beta_mid;
+            e_high = e_mid;
+
+            beta_mid = 0.5 * (beta_low + beta_high);
+            e_mid = estim_e(conf, beta_mid);
+        }
+
+        println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
+        println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
+    }
+
+    beta_mid
+}
+
 ///Generate ```sample_num``` samples via Monte Carlo using first-order Magnus expansion system
 ///indeed thermalises via time-evolution
 fn gen_hist_magnus(conf: &mut Config, sample_num: usize) {
@@ -146,7 +204,8 @@ fn gen_single_traj(conf: &mut Config, sample_num: usize) {
 
     //To do samples, run for 30 cycles to equilibrate
     //Then sample every 10 cycles?
-    let final_t: f64 = (sample_num as f64 + 30.0) * conf.tau;
+    let offset: f64 = 30.0;
+    let final_t: f64 = (sample_num as f64 + offset) * conf.tau;
     let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
 
     let pb = ProgressBar::new(final_t as u64);
@@ -157,7 +216,12 @@ fn gen_single_traj(conf: &mut Config, sample_num: usize) {
         .progress_chars("#>-");
     pb.set_style(sty);
 
-    let init_steps = (10.0 * conf.tau / conf.dt) as usize;
+    //First do some MC updates in order to get on the correct trajectory
+    //for _ in 0..100 {
+    //    sc.metropolis_update();
+    //}
+
+    let init_steps = (offset * conf.tau / conf.dt) as usize;
     let steps = (final_t / conf.dt) as usize;
     println!(
         "Generating dynamics histogram for {} steps i.e. t={}",
@@ -192,6 +256,7 @@ fn gen_single_traj(conf: &mut Config, sample_num: usize) {
     }
 }
 
+///Runs single-shot trajectories and logs observables at the end of the trajectory
 fn gen_hist_dynamics(conf: &mut Config, sample_num: usize) {
     let hist_name: String = format!("dyn-hist-t-{}.dat", conf.t);
     let dyn_hist = OpenOptions::new()
@@ -513,6 +578,8 @@ fn run_sim(conf: &mut Config) {
         pool.execute(move || {
             pb.set_message(&format!("Run {}", i));
 
+            //            spin_chain.vars.hs=vec![1.0,0.0,-2.0*PI/spin_chain.vars.tau];
+
             for _ in 0..2e7 as usize {
                 spin_chain.metropolis_update();
             }
@@ -801,6 +868,14 @@ fn main() {
             .help("Generate single-shot time-evolution at different drive periods tau"),
             )
         .arg(
+            Arg::with_name("adiabatic")
+            .short("A")
+            .value_name("TAU")
+            .takes_value(true)
+            .long("adiabatic")
+            .help("Find adiabatic ensemble H-\\omega S^z"),
+            )
+        .arg(
             Arg::with_name("steps")
             .value_name("STEPS")
             .long("steps")
@@ -833,6 +908,29 @@ fn main() {
             .collect();
         println!("{:?}", tau_vec);
         run_tau(tau_vec, steps, &mut conf);
+        default = false;
+    }
+
+    if let Some(tau) = matches.value_of("adiabatic") {
+        //Want to search for beta such that
+        // < H_f e^{-\beta H_f} > = e_0
+        // Can't think of a clever way to do this,
+        // so will set up a grid of beta, and produce estimates for
+        // the mean energy. Can then do a bisection search
+        conf.tau = tau.parse::<f64>().unwrap();
+        println!("tau={}", conf.tau);
+
+        // First need to sample a single trajectory to get the target mean energy density
+
+        // Now set this as the target
+        // and calculate the optimal effective beta
+
+        conf.hs = vec![1.0, 0.0, -2.0 * PI / conf.tau];
+        //        conf.hs = vec![0.0, 0.0, 0.0];
+
+        let result: f64 = find_beta(&mut conf);
+        println!("Optimal beta: {}", result);
+
         default = false;
     }
 

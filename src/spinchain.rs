@@ -69,8 +69,7 @@ pub struct SpinChain {
     pub vars: Config,
     ///Log file
     pub file: std::fs::File,
-
-    pub spec_name: String,
+    //    pub spec_name: String,
 }
 
 impl SpinChain {
@@ -194,8 +193,8 @@ impl SpinChain {
             .collect();
         let conf_file_name: &str =
             &[conf.file.clone(), num.to_string(), ".dat".to_string()].join("");
-        let spec_name: String =
-            (&["spectrum-".to_string(), num.to_string(), "-t-".to_string()].join("")).to_string();
+        //        let spec_name: String =
+        //            (&["spectrum-".to_string(), num.to_string(), "-t-".to_string()].join("")).to_string();
 
         //Log file
         let file = match conf.log {
@@ -215,7 +214,7 @@ impl SpinChain {
             static_h,
             t: t0,
             file,
-            spec_name,
+            //            spec_name,
         }
     }
 
@@ -230,6 +229,8 @@ impl SpinChain {
         let index: usize = rng.gen_range(0, s) as usize;
 
         //        let local_field: [f64; 3] = self.static_h[index];
+        //        This is a bit strange not having random couplings on the chain
+        //        Should change this and check that previous checks still hold
         let local_field: [f64; 3] = match index {
             _ if index < ss => self.h_ext(0.0),
             _ => self.static_h[index],
@@ -531,18 +532,18 @@ impl SpinChain {
         let ek: Vec<f64> = self.energy_spectrum();
         let rounded_t: f64 = (self.t / self.vars.tau).round() * self.vars.tau;
 
-        let spec_name: &str = &[
-            self.spec_name.clone(),
-            rounded_t.to_string(),
-            ".dat".to_string(),
-        ]
-        .join("")
-        .to_string();
+        //        let spec_name: &str = &[
+        //            self.spec_name.clone(),
+        //            rounded_t.to_string(),
+        //            ".dat".to_string(),
+        //        ]
+        //        .join("")
+        //        .to_string();
 
-        let file = File::create(&spec_name).unwrap();
-        for i in 0..l {
-            writeln!(&file, "{} {}", k_range[i], ek[i] / (self.vars.hsize as f64)).unwrap();
-        }
+        //        let file = File::create(&spec_name).unwrap();
+        //        for i in 0..l {
+        //            writeln!(&file, "{} {}", k_range[i], ek[i] / (self.vars.hsize as f64)).unwrap();
+        //        }
     }
 
     /// Returns the energy of two spins coupled with j i.e. spin1.j.spin2
