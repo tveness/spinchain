@@ -89,7 +89,7 @@ fn estim_e(conf: &mut Config, beta: f64) -> f64 {
         for _ in 0..1000 {
             sc.metropolis_update();
         }
-        e_samples[i] = sc.system_energy(); //+omega*sc.m()[2]/sc.vars.ssize as f64;
+        e_samples[i] = sc.system_energy() + omega * sc.m()[2] / sc.vars.ssize as f64;
     }
 
     //    println!("{:?}", e_samples);
@@ -101,6 +101,7 @@ fn find_beta(conf: &mut Config) -> f64 {
     let mut beta_low: f64 = 0.1;
     let mut beta_high: f64 = 5.0;
     let mut beta_mid: f64 = 0.5 * (beta_low + beta_high);
+    conf.ssize = conf.hsize;
     //    println!("Target? {}", estim_e(conf,2.88));
 
     let mut e_low = estim_e(conf, beta_low);
@@ -110,7 +111,7 @@ fn find_beta(conf: &mut Config) -> f64 {
 
     println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
     println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
-    while beta_high - beta_low > 0.01 {
+    while beta_high - beta_low > 0.001 {
         //If middle energy is too high, then beta_mid is too low (i.e. beta_mid is hot)
         if e_mid > e_target {
             beta_low = beta_mid;
@@ -191,6 +192,66 @@ fn gen_hist_magnus(conf: &mut Config, sample_num: usize) {
     println!("my: {}", my_avg / sample_num as f64);
     println!("mz: {}", mz_avg / sample_num as f64);
     println!("ed: {}", ed_avg / sample_num as f64);
+}
+
+fn trajectory_mean_e(conf: &mut Config) -> f64 {
+    let (tx, rx) = mpsc::channel();
+
+    let m = MultiProgress::new();
+    let sty = ProgressStyle::default_bar()
+        .template(
+            "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] t={pos}/{len} ({eta}) {msg}",
+        )
+        .progress_chars("#>-");
+
+    let pool = ThreadPool::new(4);
+
+    println!("Generating single trajectory energy estimate");
+
+    for i in 0..8 {
+        let txc = mpsc::Sender::clone(&tx);
+        let pb = m.add(ProgressBar::new((350.0 * conf.tau) as u64));
+        let steps: usize = (350.0 * conf.tau / conf.dt) as usize;
+        let steps_in_cycle: usize = (conf.tau / conf.dt) as usize;
+        pb.set_style(sty.clone());
+
+        let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+
+        pool.execute(move || {
+            pb.set_message(&format!("run {i}", i = i));
+            //Do dynamical updates
+            pb.reset_eta();
+            for cntr in 0..steps {
+                sc.update();
+                if steps % 100 == 0 {
+                    pb.set_position(sc.t as u64);
+                }
+
+                if cntr % steps_in_cycle == 0 && cntr > 99 * steps_in_cycle {
+                    let ed: f64 = sc.system_energy();
+                    txc.send(ed).unwrap();
+                }
+            }
+
+            pb.finish_and_clear();
+        });
+    }
+
+    let mut running_total: f64 = 0.0;
+    let mut running_num: f64 = 0.0;
+
+    m.join().unwrap();
+
+    //Close channel so we can average
+    drop(tx);
+
+    for received in rx {
+        running_num += 1.0;
+        running_total += received;
+    }
+    running_total / running_num
+
+    // Now process txc
 }
 
 fn gen_single_traj(conf: &mut Config, sample_num: usize) {
@@ -921,15 +982,30 @@ fn main() {
         println!("tau={}", conf.tau);
 
         // First need to sample a single trajectory to get the target mean energy density
+        // Collect 250 sample points from 4 separate trajectories to estimate the mean energy
+        // density
+
+        let mean_e: f64 = trajectory_mean_e(&mut conf.clone());
+        println!("Mean energy: {}", mean_e);
 
         // Now set this as the target
         // and calculate the optimal effective beta
+        conf.ednsty = mean_e;
 
         conf.hs = vec![1.0, 0.0, -2.0 * PI / conf.tau];
         //        conf.hs = vec![0.0, 0.0, 0.0];
 
         let result: f64 = find_beta(&mut conf);
         println!("Optimal beta: {}", result);
+
+        //Write this to a file
+
+        let beta_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("beta.dat")
+            .unwrap();
+        writeln!(&beta_file, "{} {} {}", conf.tau, conf.beta, result).unwrap();
 
         default = false;
     }
