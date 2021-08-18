@@ -89,7 +89,7 @@ fn estim_e(conf: &mut Config, beta: f64) -> f64 {
         for _ in 0..1000 {
             sc.metropolis_update();
         }
-        e_samples[i] = sc.system_energy() + omega * sc.m()[2] / sc.vars.ssize as f64;
+        e_samples[i] = sc.mc_system_energy() + omega * sc.m()[2] / sc.vars.ssize as f64;
     }
 
     //    println!("{:?}", e_samples);
@@ -208,10 +208,10 @@ fn trajectory_mean_e(conf: &mut Config) -> f64 {
 
     println!("Generating single trajectory energy estimate");
 
-    for i in 0..8 {
+    for i in 0..16 {
         let txc = mpsc::Sender::clone(&tx);
-        let pb = m.add(ProgressBar::new((350.0 * conf.tau) as u64));
-        let steps: usize = (350.0 * conf.tau / conf.dt) as usize;
+        let pb = m.add(ProgressBar::new((200.0 * conf.tau) as u64));
+        let steps: usize = (200.0 * conf.tau / conf.dt) as usize;
         let steps_in_cycle: usize = (conf.tau / conf.dt) as usize;
         pb.set_style(sty.clone());
 
@@ -219,17 +219,20 @@ fn trajectory_mean_e(conf: &mut Config) -> f64 {
 
         pool.execute(move || {
             pb.set_message(&format!("run {i}", i = i));
+            //Initialise chain
+            for _ in 0..2e7 as usize {
+                sc.metropolis_update();
+            }
             //Do dynamical updates
             pb.reset_eta();
             for cntr in 0..steps {
                 sc.update();
-                if steps % 100 == 0 {
+                if cntr % steps_in_cycle == 0 {
                     pb.set_position(sc.t as u64);
-                }
-
-                if cntr % steps_in_cycle == 0 && cntr > 99 * steps_in_cycle {
-                    let ed: f64 = sc.system_energy();
-                    txc.send(ed).unwrap();
+                    if cntr > 99 * steps_in_cycle {
+                        let ed: f64 = sc.system_energy();
+                        txc.send(ed).unwrap();
+                    }
                 }
             }
 
@@ -248,6 +251,7 @@ fn trajectory_mean_e(conf: &mut Config) -> f64 {
     for received in rx {
         running_num += 1.0;
         running_total += received;
+        //        println!("e: {}", received);
     }
     running_total / running_num
 
