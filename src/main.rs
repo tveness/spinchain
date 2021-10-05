@@ -95,6 +95,65 @@ fn estim_e(conf: &mut Config, beta: f64) -> f64 {
     //    println!("{:?}", e_samples);
     e_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64)
 }
+fn estim_e2(conf: &mut Config, beta: f64) -> f64 {
+    let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+    //    println!("Field: {:?}", sc.static_h);
+
+    let omega: f64 = 2.0 * PI / conf.tau;
+    sc.vars.beta = beta;
+    let samples: usize = 1000;
+    let mut e_samples: Vec<f64> = vec![0.0; samples];
+
+    for i in 0..samples {
+        for _ in 0..1e3 as usize {
+            sc.metropolis_update();
+        }
+        //        e_samples[i] = sc.mc_total_energy();
+        e_samples[i] = sc.mc_total_energy();
+    }
+
+    //    println!("{:?}", e_samples);
+    e_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64)
+}
+
+fn find_beta2(conf: &mut Config) -> f64 {
+    let e_target = conf.ednsty;
+    let mut beta_low: f64 = 0.1;
+    let mut beta_high: f64 = 5.0;
+    let mut beta_mid: f64 = 0.5 * (beta_low + beta_high);
+    //    println!("Target? {}", estim_e(conf,2.88));
+
+    let mut e_low = estim_e2(conf, beta_low);
+    let mut e_mid = estim_e2(conf, beta_mid);
+    let mut e_high = estim_e2(conf, beta_high);
+    println!("Target: {}", e_target);
+
+    println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
+    println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
+    while beta_high - beta_low > 0.001 {
+        //If middle energy is too high, then beta_mid is too low (i.e. beta_mid is hot)
+        if e_mid > e_target {
+            beta_low = beta_mid;
+            e_low = e_mid;
+
+            beta_mid = 0.5 * (beta_low + beta_high);
+            e_mid = estim_e2(conf, beta_mid);
+        }
+        //Otherwise, energy is too low, increase temp i.e. lower beta_high
+        else {
+            beta_high = beta_mid;
+            e_high = e_mid;
+
+            beta_mid = 0.5 * (beta_low + beta_high);
+            e_mid = estim_e2(conf, beta_mid);
+        }
+
+        println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
+        println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
+    }
+
+    beta_mid
+}
 
 fn find_beta(conf: &mut Config) -> f64 {
     let e_target = conf.ednsty;
@@ -134,6 +193,38 @@ fn find_beta(conf: &mut Config) -> f64 {
     }
 
     beta_mid
+}
+
+fn get_obs(conf: &mut Config) -> [f64; 4] {
+    conf.ssize = conf.hsize;
+    //    println!("Target? {}", estim_e(conf,2.88));
+
+    let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+
+    let samples: usize = 8000;
+    let mut e_samples: Vec<f64> = vec![0.0; samples];
+    let mut mx_samples: Vec<f64> = vec![0.0; samples];
+    let mut my_samples: Vec<f64> = vec![0.0; samples];
+    let mut mz_samples: Vec<f64> = vec![0.0; samples];
+    let omega: f64 = 2.0 * PI / conf.tau;
+
+    for i in 0..samples {
+        for _ in 0..1000 {
+            sc.metropolis_update();
+        }
+        e_samples[i] = sc.mc_system_energy() + omega * sc.m()[2] / sc.vars.ssize as f64;
+        mx_samples[i] = sc.m()[0] / sc.vars.ssize as f64;
+        my_samples[i] = sc.m()[1] / sc.vars.ssize as f64;
+        mz_samples[i] = sc.m()[2] / sc.vars.ssize as f64;
+    }
+
+    //    println!("{:?}", e_samples);
+    [
+        e_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+        mx_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+        my_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+        mz_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+    ]
 }
 
 ///Generate ```sample_num``` samples via Monte Carlo using first-order Magnus expansion system
@@ -210,8 +301,8 @@ fn trajectory_mean_e(conf: &mut Config) -> f64 {
 
     for i in 0..16 {
         let txc = mpsc::Sender::clone(&tx);
-        let pb = m.add(ProgressBar::new((200.0 * conf.tau) as u64));
-        let steps: usize = (200.0 * conf.tau / conf.dt) as usize;
+        let pb = m.add(ProgressBar::new((1000.0 * conf.tau) as u64));
+        let steps: usize = (1000.0 * conf.tau / conf.dt) as usize;
         let steps_in_cycle: usize = (conf.tau / conf.dt) as usize;
         pb.set_style(sty.clone());
 
@@ -461,6 +552,9 @@ fn gen_hist(conf: &mut Config, sample_num: usize) {
         let mx: f64 = sc.m()[0] / sc.vars.ssize as f64;
         let my: f64 = sc.m()[1] / sc.vars.ssize as f64;
         let mz: f64 = sc.m()[2] / sc.vars.ssize as f64;
+        //        let ed: f64 = sc.system_energy();
+        //        Make it comparable to MC
+
         let ed: f64 = sc.system_energy();
 
         writeln!(&dyn_hist, "{} {} {} {} {}", i, mx, my, mz, ed).unwrap();
@@ -941,6 +1035,14 @@ fn main() {
             .help("Find adiabatic ensemble H-\\omega S^z"),
             )
         .arg(
+            Arg::with_name("adiab2")
+            .short("D")
+            .value_name("TAU")
+            .takes_value(true)
+            .long("adiab-full")
+            .help("Find adiabatic ensemble H-\\omega S^z inhomogeneous"),
+            )
+        .arg(
             Arg::with_name("steps")
             .value_name("STEPS")
             .long("steps")
@@ -976,6 +1078,27 @@ fn main() {
         default = false;
     }
 
+    if let Some(tau) = matches.value_of("adiab2") {
+        println!("Adiab 2");
+        conf.tau = tau.parse::<f64>().unwrap();
+
+        conf.hs = vec![1.0, 0.0, 0.0];
+        conf.hfield = vec![0.0, 0.0, -2.0 * PI / conf.tau];
+
+        let result: f64 = find_beta2(&mut conf);
+
+        println!("Optimal beta: {}", result);
+
+        let beta_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("beta.dat")
+            .unwrap();
+        writeln!(&beta_file, "{} {} {}", conf.tau, conf.beta, result).unwrap();
+
+        default = false;
+    }
+
     if let Some(tau) = matches.value_of("adiabatic") {
         //Want to search for beta such that
         // < H_f e^{-\beta H_f} > = e_0
@@ -999,17 +1122,28 @@ fn main() {
         conf.hs = vec![1.0, 0.0, -2.0 * PI / conf.tau];
         //        conf.hs = vec![0.0, 0.0, 0.0];
 
+        let initial_beta: f64 = conf.beta;
         let result: f64 = find_beta(&mut conf);
         println!("Optimal beta: {}", result);
 
         //Write this to a file
+
+        conf.beta = result;
+
+        // Get e, mx, my, mz for this beta
+        let results: [f64; 4] = get_obs(&mut conf);
 
         let beta_file = OpenOptions::new()
             .create(true)
             .append(true)
             .open("beta.dat")
             .unwrap();
-        writeln!(&beta_file, "{} {} {}", conf.tau, conf.beta, result).unwrap();
+        writeln!(
+            &beta_file,
+            "{} {} {} {} {} {} {} {}",
+            conf.tau, initial_beta, result, results[0], results[1], results[2], results[3], mean_e
+        )
+        .unwrap();
 
         default = false;
     }

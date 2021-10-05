@@ -228,14 +228,8 @@ impl SpinChain {
         let ss: usize = self.vars.ssize as usize;
         let index: usize = rng.gen_range(0, s) as usize;
 
-        //No external field for MC
+        //No driving field for MC
         let local_field: [f64; 3] = self.static_h[index];
-        //        This is a bit strange not having random couplings on the chain
-        //        Should change this and check that previous checks still hold
-        //        let local_field: [f64; 3] = match index {
-        //           _ if index < ss => Self::sum_vec(&self.static_h[index] , &self.h_ext(0.0)),
-        //          _ => self.static_h[index],
-        //     };
 
         //Calculate initial energy
         //First get left and right spins and couplings
@@ -742,6 +736,32 @@ impl SpinChain {
         }
 
         e / (s - 1) as f64
+    }
+
+    pub fn mc_total_energy(&self) -> f64 {
+        //Size is ssize
+        let s: usize = self.vars.hsize as usize;
+
+        //
+        let mut e: f64 = 0.0;
+
+        //Get energy of magnetic field terms
+        //There *is no* external field for MC
+        //let h_e: [f64; 3] = self.h_ext(0.0);
+
+        for i in 0..s - 1 {
+            for k in 0..3 {
+                e -= self.spins[i].dir[k] * self.j_couple[i][k] * self.spins[i + 1].dir[k];
+                e += self.spins[i].dir[k] * self.static_h[i][k];
+            }
+        }
+
+        for k in 0..3 {
+            e -= self.spins[s - 1].dir[k] * self.j_couple[s - 1][k] * self.spins[0].dir[k];
+            e += self.spins[s - 1].dir[k] * self.static_h[s - 1][k];
+        }
+
+        e / (s as f64)
     }
 
     pub fn mc_system_energy(&self) -> f64 {
