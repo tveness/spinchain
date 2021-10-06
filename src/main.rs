@@ -99,7 +99,7 @@ fn estim_e2(conf: &mut Config, beta: f64) -> f64 {
     let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
     //    println!("Field: {:?}", sc.static_h);
 
-    let omega: f64 = 2.0 * PI / conf.tau;
+    //let omega: f64 = 2.0 * PI / conf.tau;
     sc.vars.beta = beta;
     let samples: usize = 1000;
     let mut e_samples: Vec<f64> = vec![0.0; samples];
@@ -135,18 +135,14 @@ fn find_beta2(conf: &mut Config) -> f64 {
         if e_mid > e_target {
             beta_low = beta_mid;
             e_low = e_mid;
-
-            beta_mid = 0.5 * (beta_low + beta_high);
-            e_mid = estim_e2(conf, beta_mid);
         }
         //Otherwise, energy is too low, increase temp i.e. lower beta_high
         else {
             beta_high = beta_mid;
             e_high = e_mid;
-
-            beta_mid = 0.5 * (beta_low + beta_high);
-            e_mid = estim_e2(conf, beta_mid);
         }
+        beta_mid = 0.5 * (beta_low + beta_high);
+        e_mid = estim_e2(conf, beta_mid);
 
         println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
         println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
@@ -175,18 +171,14 @@ fn find_beta(conf: &mut Config) -> f64 {
         if e_mid > e_target {
             beta_low = beta_mid;
             e_low = e_mid;
-
-            beta_mid = 0.5 * (beta_low + beta_high);
-            e_mid = estim_e(conf, beta_mid);
         }
         //Otherwise, energy is too low, increase temp i.e. lower beta_high
         else {
             beta_high = beta_mid;
             e_high = e_mid;
-
-            beta_mid = 0.5 * (beta_low + beta_high);
-            e_mid = estim_e(conf, beta_mid);
         }
+        beta_mid = 0.5 * (beta_low + beta_high);
+        e_mid = estim_e(conf, beta_mid);
 
         println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
         println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
@@ -1049,6 +1041,13 @@ fn main() {
             .takes_value(true)
             .help("Set step limit when doing n-steps")
             )
+        .arg(
+            Arg::with_name("fit").allow_hyphen_values(true)
+            .value_name("E")
+            .short("f")
+            .takes_value(true)
+            .help("Fit temperature of Monte Carlo ensemble with energy density E")
+            )
         .get_matches();
     let mut default = true;
     //Want to read num from file
@@ -1095,6 +1094,24 @@ fn main() {
             .open("beta.dat")
             .unwrap();
         writeln!(&beta_file, "{} {} {}", conf.tau, conf.beta, result).unwrap();
+
+        default = false;
+    }
+
+    if let Some(targete) = matches.value_of("fit") {
+        conf.ednsty = targete.parse::<f64>().unwrap();
+        conf.hs = vec![1.0, 0.0, 0.0];
+        conf.hfield = vec![0.0, 0.0, -2.0 * PI / conf.tau];
+        conf.hsize = conf.ssize;
+
+        let result: f64 = find_beta(&mut conf);
+
+        let betat_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("betat.dat")
+            .unwrap();
+        writeln!(&betat_file, "{} {}", targete, result).unwrap();
 
         default = false;
     }
@@ -1157,15 +1174,15 @@ fn main() {
 
     let points: usize = match matches.value_of("hist") {
         Some(x) => x.parse::<usize>().unwrap(),
-        None => 8000 as usize,
+        None => 8000_usize,
     };
     let sample_num: usize = match matches.value_of("dynhist") {
         Some(x) => x.parse::<usize>().unwrap(),
-        None => 1000 as usize,
+        None => 1000_usize,
     };
     let single_samples: usize = match matches.value_of("singletraj") {
         Some(x) => x.parse::<usize>().unwrap(),
-        None => 1000 as usize,
+        None => 1000_usize,
     };
 
     match matches.occurrences_of("magnus-hist") {
