@@ -419,6 +419,36 @@ impl SpinChain {
             self.spins[index].dir = new_spin.dir;
         }
     }
+    pub fn log_ext(&self) {
+        let h_e: [f64; 3] = self.h_ext(self.t);
+
+        let h: Vec<[f64; 3]> = (0..self.vars.ssize as usize)
+            .map(|x| SpinChain::sum_vec(&self.static_h[x], &h_e))
+            .collect();
+
+        for j in 1..(self.vars.hsize - 1) as usize {
+            let mut e_loc: f64 = 0.0;
+            for k in 0..3 {
+                e_loc -= 0.5
+                    * (self.spins[j - 1].dir[k] * self.j_couple[j - 1][k] * self.spins[j].dir[k]
+                        + self.spins[j].dir[k] * self.j_couple[j][k] * self.spins[j + 1].dir[k]);
+                if j < self.vars.ssize as usize {
+                    e_loc += h[j][k] * self.spins[j].dir[k];
+                }
+            }
+
+            let mx_loc = self.spins[j].dir[0];
+            let my_loc = self.spins[j].dir[1];
+            let mz_loc = self.spins[j].dir[2];
+            writeln!(
+                &self.file,
+                "{} {} {} {} {} {}",
+                self.t, j, e_loc, mx_loc, my_loc, mz_loc,
+            )
+            .unwrap();
+        }
+        writeln!(&self.file, "").unwrap();
+    }
 
     pub fn log(&self) {
         let e: f64 = self.system_energy();
