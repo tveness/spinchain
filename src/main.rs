@@ -153,7 +153,7 @@ fn find_beta2(conf: &mut Config) -> f64 {
 
 fn find_beta(conf: &mut Config) -> f64 {
     let e_target = conf.ednsty;
-    let mut beta_low: f64 = 0.1;
+    let mut beta_low: f64 = 0.01;
     let mut beta_high: f64 = 5.0;
     let mut beta_mid: f64 = 0.5 * (beta_low + beta_high);
     conf.ssize = conf.hsize;
@@ -1001,6 +1001,14 @@ fn main() {
     let matches = App::new("spinchain")
         .version(crate_version!())
         .author("Thomas Veness <thomas.veness@nottingham.ac.uk>")
+        .arg(
+            Arg::with_name("tau")
+                .short("t")
+                .value_name("TAU")
+                .takes_value(true)
+                .long("tau")
+                .help("Override tau of config"),
+        )
         .about("Run classical spin chain simulation")
         .arg(
             Arg::with_name("avg")
@@ -1117,6 +1125,9 @@ fn main() {
     let mut default = true;
     //Want to read num from file
     let mut conf: Config = SpinChain::read_config("config.toml");
+    if let Some(tau) = matches.value_of("tau") {
+        conf.tau = tau.parse::<f64>().unwrap();
+    }
 
     match matches.occurrences_of("config-description") {
         0 => {}
@@ -1179,13 +1190,18 @@ fn main() {
         conf.hsize = conf.ssize;
 
         let result: f64 = find_beta(&mut conf);
+        conf.beta = result;
+
+        //Also calculate observables from this
+
+        let results: [f64; 4] = get_obs(&mut conf);
 
         let betat_file = OpenOptions::new()
             .create(true)
             .append(true)
             .open("betat.dat")
             .unwrap();
-        writeln!(&betat_file, "{} {}", targete, result).unwrap();
+        writeln!(&betat_file, "{} {} {} {} {} {} {}", conf.tau, targete, conf.beta, results[0], results[1], results[2], results[3]).unwrap();
 
         default = false;
     }
