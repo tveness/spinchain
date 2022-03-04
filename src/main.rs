@@ -115,6 +115,63 @@ fn estim_e2(conf: &mut Config, beta: f64) -> f64 {
     //    println!("{:?}", e_samples);
     e_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64)
 }
+fn estim_eh(conf: &mut Config, beta: f64) -> f64 {
+    let omega: f64 = 2.0 * PI / conf.tau;
+    let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+    //    println!("Field: {:?}", sc.static_h);
+
+    //let omega: f64 = 2.0 * PI / conf.tau;
+    sc.vars.beta = beta;
+    let samples: usize = 1000;
+    let mut e_samples: Vec<f64> = vec![0.0; samples];
+
+    for i in 0..samples {
+        for _ in 0..1e3 as usize {
+            sc.metropolis_update();
+        }
+        //        e_samples[i] = sc.mc_total_energy();
+        e_samples[i] =
+            sc.mc_total_energy();// + omega*sc.m()[2]/ sc.vars.ssize as f64;
+    }
+
+    //    println!("{:?}", e_samples);
+    e_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64)
+}
+
+fn find_betah(conf: &mut Config) -> f64 {
+    let e_target = conf.ednsty;
+    let mut beta_low: f64 = 0.1;
+    let mut beta_high: f64 = 5.0;
+    let mut beta_mid: f64 = 0.5 * (beta_low + beta_high);
+    //    println!("Target? {}", estim_e(conf,2.88));
+
+    let mut e_low = estim_eh(conf, beta_low);
+    let mut e_mid = estim_eh(conf, beta_mid);
+    let mut e_high = estim_eh(conf, beta_high);
+    println!("Target: {}", e_target);
+
+    println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
+    println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
+    while beta_high - beta_low > 0.001 {
+        //If middle energy is too high, then beta_mid is too low (i.e. beta_mid is hot)
+        if e_mid > e_target {
+            beta_low = beta_mid;
+            e_low = e_mid;
+        }
+        //Otherwise, energy is too low, increase temp i.e. lower beta_high
+        else {
+            beta_high = beta_mid;
+            e_high = e_mid;
+        }
+        beta_mid = 0.5 * (beta_low + beta_high);
+        e_mid = estim_eh(conf, beta_mid);
+
+        println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
+        println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
+    }
+
+    beta_mid
+}
 
 fn find_beta2(conf: &mut Config) -> f64 {
     let e_target = conf.ednsty;
@@ -185,6 +242,37 @@ fn find_beta(conf: &mut Config) -> f64 {
     }
 
     beta_mid
+}
+
+fn get_obsh(conf: &mut Config) -> [f64; 4] {
+    conf.ssize = conf.hsize;
+    //    println!("Target? {}", estim_e(conf,2.88));
+
+    let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+
+    let samples: usize = 8000;
+    let mut e_samples: Vec<f64> = vec![0.0; samples];
+    let mut mx_samples: Vec<f64> = vec![0.0; samples];
+    let mut my_samples: Vec<f64> = vec![0.0; samples];
+    let mut mz_samples: Vec<f64> = vec![0.0; samples];
+
+    for i in 0..samples {
+        for _ in 0..1000 {
+            sc.metropolis_update();
+        }
+        e_samples[i] = sc.mc_system_energy();
+        mx_samples[i] = sc.m()[0] / sc.vars.ssize as f64;
+        my_samples[i] = sc.m()[1] / sc.vars.ssize as f64;
+        mz_samples[i] = sc.m()[2] / sc.vars.ssize as f64;
+    }
+
+    //    println!("{:?}", e_samples);
+    [
+        e_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+        mx_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+        my_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+        mz_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+    ]
 }
 
 fn get_obs(conf: &mut Config) -> [f64; 4] {
@@ -287,11 +375,11 @@ fn trajectory_mean_e(conf: &mut Config) -> f64 {
         )
         .progress_chars("#>-");
 
-    let pool = ThreadPool::new(4);
+    let pool = ThreadPool::new(conf.threads);
 
     println!("Generating single trajectory energy estimate");
 
-    for i in 0..16 {
+    for i in 0..((conf.runs) as usize) {
         let txc = mpsc::Sender::clone(&tx);
         let pb = m.add(ProgressBar::new((1000.0 * conf.tau) as u64));
         let steps: usize = (1000.0 * conf.tau / conf.dt) as usize;
@@ -1116,6 +1204,20 @@ fn main() {
             .takes_value(true)
             .help("Fit temperature of Monte Carlo ensemble with energy density E")
             )
+        .arg(
+            Arg::with_name("fit-effective").allow_hyphen_values(true)
+            .value_name("E")
+            .short("F")
+            .takes_value(true)
+            .help("Calculate effective ensemble temperature via conserved quantity arguments")
+            )
+        .arg(
+            Arg::with_name("high-freq").allow_hyphen_values(true)
+            .value_name("E")
+            .short("H")
+            .takes_value(true)
+            .help("Calculate effective ensemble with initla temp and first-order Magnus")
+            )
 	.arg(
 	    Arg::with_name("ext")
 	    .short("e")
@@ -1201,7 +1303,65 @@ fn main() {
             .append(true)
             .open("betat.dat")
             .unwrap();
-        writeln!(&betat_file, "{} {} {} {} {} {} {}", conf.tau, targete, conf.beta, results[0], results[1], results[2], results[3]).unwrap();
+        writeln!(
+            &betat_file,
+            "{} {} {} {} {} {} {}",
+            conf.tau, targete, conf.beta, results[0], results[1], results[2], results[3]
+        )
+        .unwrap();
+
+        default = false;
+    }
+
+    if let Some(targete) = matches.value_of("fit-effective") {
+        conf.ednsty = targete.parse::<f64>().unwrap();
+        conf.hs = vec![1.0, 0.0, 0.0];
+        conf.hfield = vec![0.0, 0.0, -2.0 * PI / conf.tau];
+//        conf.hsize = conf.ssize;
+
+        let result: f64 = find_betah(&mut conf);
+        conf.beta = result;
+
+        //Also calculate observables from this
+        conf.hs = vec![1.0, 0.0, 0.0];
+
+        let results: [f64; 4] = get_obsh(&mut conf);
+
+        let betat_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("betat.dat")
+            .unwrap();
+        writeln!(
+            &betat_file,
+            "{} {} {} {} {} {} {}",
+            conf.tau, targete, conf.beta, results[0], results[1], results[2], results[3]
+        )
+        .unwrap();
+
+        default = false;
+    }
+    if let Some(targete) = matches.value_of("high-freq") {
+
+        conf.ednsty = targete.parse::<f64>().unwrap();
+
+        conf.hfield = vec![0.0, 0.0, -conf.tau/(4.0 * PI)];
+//        conf.hsize = conf.ssize;
+
+
+        let results: [f64; 4] = get_obsh(&mut conf);
+
+        let betat_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("betat.dat")
+            .unwrap();
+        writeln!(
+            &betat_file,
+            "{} {} {} {} {} {} {}",
+            conf.tau, targete, conf.beta, results[0], results[1], results[2], results[3]
+        )
+        .unwrap();
 
         default = false;
     }

@@ -1,5 +1,5 @@
 hsize = 100
-ssize = 16
+ssize = 20
 t = 1000.0
 dt = 0.02
 runs = 4
