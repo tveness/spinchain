@@ -217,6 +217,223 @@ impl SpinChain {
             //            spec_name,
         }
     }
+    pub fn metropolis_update_maglab(&mut self) {
+        let mut rng = rand::thread_rng();
+        let unif = Uniform::from(0.0..1.0);
+
+        // Select a spin at random from the chain
+        let s: usize = self.vars.hsize as usize;
+        let ss: usize = self.vars.ssize as usize;
+        let index: usize = rng.gen_range(0, s) as usize;
+
+        let om: f64 = 2.0 * PI / self.vars.tau;
+
+        //No driving field for MC
+        let local_field: [f64; 3] = self.static_h[index];
+
+        //Calculate initial energy
+        //First get left and right spins and couplings
+        let s_c: &Spin = &self.spins[index];
+        let s_l: &Spin = match index {
+            _ if index == 0 => &self.spins[s - 1],
+            _ => &self.spins[index - 1],
+        };
+
+        let s_r: &Spin = match index {
+            _ if index == s - 1 => &self.spins[0],
+            _ => &self.spins[index + 1],
+        };
+
+        let j_l: &[f64; 3] = match index {
+            _ if index == 0 => &self.j_couple[s - 1],
+            _ => &self.j_couple[index - 1],
+        };
+
+        let j_r: &[f64; 3] = &self.j_couple[index];
+        let mut ei: f64 = 0.0;
+
+        for k in 0..3 {
+            //Regular Hamiltonian
+            ei -= s_l.dir[k] * j_l[k] * s_c.dir[k] + s_r.dir[k] * j_r[k] * s_c.dir[k];
+        }
+
+        // -S^z/2om everywhere
+        ei -= s_c.dir[2] / (2.0 * om);
+
+        // Select random angles
+        let theta: f64 = 2.0 * PI * unif.sample(&mut rng);
+        let phi: f64 = (1.0 - 2.0 * unif.sample(&mut rng)).acos();
+        let new_spin: Spin = Spin::new_from_angles(theta, phi);
+
+        let mut de: f64 = -ei;
+        for k in 0..3 {
+            //Regular Hamiltonian
+            de -= s_l.dir[k] * j_l[k] * new_spin.dir[k] + s_r.dir[k] * j_r[k] * new_spin.dir[k];
+        }
+
+        // -omega S^z everywhere
+        de -= new_spin.dir[2] / (2.0 * om);
+
+        // Evaluate energy difference
+
+        // Accept/reject
+        // Accept if <0, or w/ prob e^{-\beta \Delta E} otherwise
+        if de < 0.0 || unif.sample(&mut rng) < (-self.vars.beta * de).exp() {
+            self.spins[index].dir = new_spin.dir;
+        }
+    }
+
+    /// Does a Metropolis update for a single spin with inverse temperature beta
+    /// This is in the rotating frame with leading Magnus correction
+    pub fn metropolis_update_rot_magnus(&mut self) {
+        let mut rng = rand::thread_rng();
+        let unif = Uniform::from(0.0..1.0);
+
+        // Select a spin at random from the chain
+        let s: usize = self.vars.hsize as usize;
+        let ss: usize = self.vars.ssize as usize;
+        let index: usize = rng.gen_range(0, s) as usize;
+
+        let om: f64 = 2.0 * PI / self.vars.tau;
+
+        //No driving field for MC
+        let local_field: [f64; 3] = self.static_h[index];
+
+        //Calculate initial energy
+        //First get left and right spins and couplings
+        let s_c: &Spin = &self.spins[index];
+        let s_l: &Spin = match index {
+            _ if index == 0 => &self.spins[s - 1],
+            _ => &self.spins[index - 1],
+        };
+        let s_ll: &Spin = match index {
+            _ if index == 0 => &self.spins[s - 2],
+            _ if index == 1 => &self.spins[s - 1],
+            _ => &self.spins[index - 2],
+        };
+
+        let s_r: &Spin = match index {
+            _ if index == s - 1 => &self.spins[0],
+            _ => &self.spins[index + 1],
+        };
+
+        let s_rr: &Spin = match index {
+            _ if index == s - 2 => &self.spins[0],
+            _ if index == s - 1 => &self.spins[1],
+            _ => &self.spins[index + 2],
+        };
+
+        let j_l: &[f64; 3] = match index {
+            _ if index == 0 => &self.j_couple[s - 1],
+            _ => &self.j_couple[index - 1],
+        };
+        let j_ll: &[f64; 3] = match index {
+            _ if index == 0 => &self.j_couple[s - 2],
+            _ if index == 1 => &self.j_couple[s - 1],
+            _ => &self.j_couple[index - 2],
+        };
+
+        let j_r: &[f64; 3] = &self.j_couple[index];
+        let j_rr: &[f64; 3] = match index {
+            _ if index == s - 1 => &self.j_couple[0],
+            _ => &self.j_couple[index + 1],
+        };
+
+        let mut ei: f64 = 0.0;
+
+        for k in 0..2 {
+            //Regular Hamiltonian
+            ei -= s_l.dir[k] * 0.5 * (j_l[0] + j_l[1]) * s_c.dir[k]
+                + s_r.dir[k] * 0.5 * (j_r[0] + j_r[1]) * s_c.dir[k];
+        }
+        //Regular Hamiltonian
+        ei -= s_l.dir[2] * j_l[2] * s_c.dir[2] + s_r.dir[2] * j_r[2] * s_c.dir[2];
+
+        //Generate local field manually: S^x if in subsystem
+        ei += s_c.dir[0]
+            * match index {
+                _ if index < ss => 1.0,
+                _ => 0.0,
+            };
+        // -omega S^z everywhere
+        ei -= om * s_c.dir[2];
+
+        // Now add additional terms
+        let mut mg: f64 = 0.0;
+        mg += (j_r[1] - j_r[0]) * (j_r[1] - j_r[0]) * SpinChain::zxi_trip(s_c, s_c, s_r);
+        mg += (j_r[1] - j_r[0]) * (j_r[1] - j_r[0]) * SpinChain::zxi_trip(s_r, s_r, s_c);
+        mg += (j_l[1] - j_l[0]) * (j_l[1] - j_l[0]) * SpinChain::zxi_trip(s_l, s_l, s_c);
+        mg += (j_l[1] - j_l[0]) * (j_l[1] - j_l[0]) * SpinChain::zxi_trip(s_c, s_c, s_l);
+        mg += (j_l[1] - j_l[0])
+            * (j_r[1] - j_r[0])
+            * (SpinChain::zxi_trip(s_r, s_l, s_c) + SpinChain::zxi_trip(s_l, s_r, s_c));
+        mg += (j_ll[1] - j_ll[0])
+            * (j_l[1] - j_l[0])
+            * (SpinChain::zxi_trip(s_c, s_ll, s_l) + SpinChain::zxi_trip(s_ll, s_c, s_l));
+        mg += (j_r[1] - j_r[0])
+            * (j_rr[1] - j_rr[0])
+            * (SpinChain::zxi_trip(s_rr, s_c, s_r) + SpinChain::zxi_trip(s_c, s_rr, s_r));
+
+        ei -= mg / (16.0 * om);
+
+        // Select random angles
+        let theta: f64 = 2.0 * PI * unif.sample(&mut rng);
+        let phi: f64 = (1.0 - 2.0 * unif.sample(&mut rng)).acos();
+        let new_spin: Spin = Spin::new_from_angles(theta, phi);
+
+        let mut de: f64 = -ei;
+        for k in 0..2 {
+            //Regular Hamiltonian
+            de -= s_l.dir[k] * 0.5 * (j_l[0] + j_l[1]) * new_spin.dir[k]
+                + s_r.dir[k] * 0.5 * (j_r[0] + j_r[1]) * new_spin.dir[k];
+        }
+        //Regular Hamiltonian
+        de -= s_l.dir[2] * j_l[2] * new_spin.dir[2] + s_r.dir[2] * j_r[2] * new_spin.dir[2];
+
+        //Generate local field manually: S^x if in subsystem
+        de += new_spin.dir[0]
+            * match index {
+                _ if index < ss => 1.0,
+                _ => 0.0,
+            };
+        // -omega S^z everywhere
+        de -= om * new_spin.dir[2];
+
+        let mut mgd: f64 = 0.0;
+        mgd +=
+            (j_r[1] - j_r[0]) * (j_r[1] - j_r[0]) * SpinChain::zxi_trip(&new_spin, &new_spin, s_r);
+        mgd += (j_r[1] - j_r[0]) * (j_r[1] - j_r[0]) * SpinChain::zxi_trip(s_r, s_r, &new_spin);
+        mgd += (j_l[1] - j_l[0]) * (j_l[1] - j_l[0]) * SpinChain::zxi_trip(s_l, s_l, &new_spin);
+        mgd +=
+            (j_l[1] - j_l[0]) * (j_l[1] - j_l[0]) * SpinChain::zxi_trip(&new_spin, &new_spin, s_l);
+        mgd += (j_l[1] - j_l[0])
+            * (j_r[1] - j_r[0])
+            * (SpinChain::zxi_trip(s_r, s_l, &new_spin) + SpinChain::zxi_trip(s_l, s_r, &new_spin));
+        mgd += (j_ll[1] - j_ll[0])
+            * (j_l[1] - j_l[0])
+            * (SpinChain::zxi_trip(&new_spin, s_ll, s_l)
+                + SpinChain::zxi_trip(s_ll, &new_spin, s_l));
+        mgd += (j_r[1] - j_r[0])
+            * (j_rr[1] - j_rr[0])
+            * (SpinChain::zxi_trip(s_rr, &new_spin, s_r)
+                + SpinChain::zxi_trip(&new_spin, s_rr, s_r));
+
+        de -= mgd / (16.0 * om);
+
+        // Evaluate energy difference
+
+        // Accept/reject
+        // Accept if <0, or w/ prob e^{-\beta \Delta E} otherwise
+        if de < 0.0 || unif.sample(&mut rng) < (-self.vars.beta * de).exp() {
+            self.spins[index].dir = new_spin.dir;
+        }
+    }
+
+    // With respect to "base index", return (sigma^z S_z) . (sigma^x S_x) x S_i
+    // = S_i^z . ( X X + Y Y)
+    fn zxi_trip(s_z: &Spin, s_x: &Spin, s_i: &Spin) -> f64 {
+        s_i.dir[2] * (s_z.dir[0] * s_x.dir[0] + s_z.dir[1] * s_x.dir[1])
+    }
 
     /// Does a Metropolis update for a single spin with inverse temperature beta
     pub fn metropolis_update(&mut self) {
@@ -792,6 +1009,199 @@ impl SpinChain {
         }
 
         e / (s as f64)
+    }
+    pub fn mc_system_energy_maglab(&self) -> f64 {
+        //Size is ssize
+        let s: usize = self.vars.ssize as usize;
+        let h: usize = self.vars.hsize as usize;
+        let om: f64 = 2.0 * PI / self.vars.tau;
+
+        //
+        let mut e: f64 = 0.0;
+
+        //Get energy of magnetic field terms
+        //There *is no* external field for MC
+        //let h_e: [f64; 3] = self.h_ext(0.0);
+
+        // S J S
+        for i in 0..h - 1 {
+            for k in 0..3 {
+                e -= self.spins[i].dir[k] * self.j_couple[i][k] * self.spins[i + 1].dir[k];
+            }
+        }
+        for k in 0..3 {
+            e -= self.spins[h - 1].dir[k] * self.j_couple[h - 1][k] * self.spins[0].dir[k];
+        }
+
+        // S^x - S^z / (2 * omega)
+        /*
+        for i in 0..s {
+            e += self.spins[i].dir[0];
+        }
+        */
+        for i in 0..h {
+            e += -self.spins[i].dir[2] / (2.0 * om);
+        }
+
+        let mut mg: f64 = 0.0;
+        // Now for correction term
+        for index in 0..h {
+            let s_c: &Spin = &self.spins[index];
+            let s_l: &Spin = match index {
+                _ if index == 0 => &self.spins[h - 1],
+                _ => &self.spins[index - 1],
+            };
+            let s_ll: &Spin = match index {
+                _ if index == 0 => &self.spins[h - 2],
+                _ if index == 1 => &self.spins[h - 1],
+                _ => &self.spins[index - 2],
+            };
+
+            let s_r: &Spin = match index {
+                _ if index == h - 1 => &self.spins[0],
+                _ => &self.spins[index + 1],
+            };
+
+            let s_rr: &Spin = match index {
+                _ if index == h - 2 => &self.spins[0],
+                _ if index == h - 1 => &self.spins[1],
+                _ => &self.spins[index + 2],
+            };
+
+            let j_l: &[f64; 3] = match index {
+                _ if index == 0 => &self.j_couple[h - 1],
+                _ => &self.j_couple[index - 1],
+            };
+            let j_ll: &[f64; 3] = match index {
+                _ if index == 0 => &self.j_couple[h - 2],
+                _ if index == 1 => &self.j_couple[h - 1],
+                _ => &self.j_couple[index - 2],
+            };
+
+            let j_r: &[f64; 3] = &self.j_couple[index];
+            let j_rr: &[f64; 3] = match index {
+                _ if index == h - 1 => &self.j_couple[0],
+                _ => &self.j_couple[index + 1],
+            };
+
+            mg += (j_r[1] - j_r[0]) * (j_r[1] - j_r[0]) * SpinChain::zxi_trip(s_c, s_c, s_r);
+            mg += (j_r[1] - j_r[0]) * (j_r[1] - j_r[0]) * SpinChain::zxi_trip(s_r, s_r, s_c);
+            mg += (j_l[1] - j_l[0]) * (j_l[1] - j_l[0]) * SpinChain::zxi_trip(s_l, s_l, s_c);
+            mg += (j_l[1] - j_l[0]) * (j_l[1] - j_l[0]) * SpinChain::zxi_trip(s_c, s_c, s_l);
+            mg += (j_l[1] - j_l[0])
+                * (j_r[1] - j_r[0])
+                * (SpinChain::zxi_trip(s_r, s_l, s_c) + SpinChain::zxi_trip(s_l, s_r, s_c));
+            mg += (j_ll[1] - j_ll[0])
+                * (j_l[1] - j_l[0])
+                * (SpinChain::zxi_trip(s_c, s_ll, s_l) + SpinChain::zxi_trip(s_ll, s_c, s_l));
+            mg += (j_r[1] - j_r[0])
+                * (j_rr[1] - j_rr[0])
+                * (SpinChain::zxi_trip(s_rr, s_c, s_r) + SpinChain::zxi_trip(s_c, s_rr, s_r));
+        }
+
+        e -= mg / (16.0 * om);
+
+        e / (h as f64)
+    }
+
+    pub fn mc_system_energy_rot(&self) -> f64 {
+        //Size is ssize
+        let s: usize = self.vars.ssize as usize;
+        let h: usize = self.vars.hsize as usize;
+        let om: f64 = 2.0 * PI / self.vars.tau;
+
+        //
+        let mut e: f64 = 0.0;
+
+        //Get energy of magnetic field terms
+        //There *is no* external field for MC
+        //let h_e: [f64; 3] = self.h_ext(0.0);
+
+        // S J S
+        for i in 0..h - 1 {
+            for k in 0..2 {
+                e -= self.spins[i].dir[k]
+                    * 0.5
+                    * (self.j_couple[i][0] + self.j_couple[i][1])
+                    * self.spins[i + 1].dir[k];
+            }
+            e -= self.spins[i].dir[2] * self.j_couple[i][2] * self.spins[i + 1].dir[2];
+        }
+        for k in 0..2 {
+            e -= self.spins[h - 1].dir[k]
+                * 0.5
+                * (self.j_couple[h - 1][0] + self.j_couple[h - 1][1])
+                * self.spins[0].dir[k];
+        }
+        e -= self.spins[h - 1].dir[2] * self.j_couple[h - 1][2] * self.spins[0].dir[2];
+
+        // S^x - om S^z / (2 * omega)
+        for i in 0..s {
+            e += self.spins[i].dir[0];
+        }
+        for i in 0..h {
+            e += -om * self.spins[i].dir[2];
+        }
+
+        let mut mg: f64 = 0.0;
+        // Now for correction term
+        for index in 0..h {
+            let s_c: &Spin = &self.spins[index];
+            let s_l: &Spin = match index {
+                _ if index == 0 => &self.spins[h - 1],
+                _ => &self.spins[index - 1],
+            };
+            let s_ll: &Spin = match index {
+                _ if index == 0 => &self.spins[h - 2],
+                _ if index == 1 => &self.spins[h - 1],
+                _ => &self.spins[index - 2],
+            };
+
+            let s_r: &Spin = match index {
+                _ if index == h - 1 => &self.spins[0],
+                _ => &self.spins[index + 1],
+            };
+
+            let s_rr: &Spin = match index {
+                _ if index == h - 2 => &self.spins[0],
+                _ if index == h - 1 => &self.spins[1],
+                _ => &self.spins[index + 2],
+            };
+
+            let j_l: &[f64; 3] = match index {
+                _ if index == 0 => &self.j_couple[h - 1],
+                _ => &self.j_couple[index - 1],
+            };
+            let j_ll: &[f64; 3] = match index {
+                _ if index == 0 => &self.j_couple[h - 2],
+                _ if index == 1 => &self.j_couple[h - 1],
+                _ => &self.j_couple[index - 2],
+            };
+
+            let j_r: &[f64; 3] = &self.j_couple[index];
+            let j_rr: &[f64; 3] = match index {
+                _ if index == h - 1 => &self.j_couple[0],
+                _ => &self.j_couple[index + 1],
+            };
+
+            mg += (j_r[1] - j_r[0]) * (j_r[1] - j_r[0]) * SpinChain::zxi_trip(s_c, s_c, s_r);
+            mg += (j_r[1] - j_r[0]) * (j_r[1] - j_r[0]) * SpinChain::zxi_trip(s_r, s_r, s_c);
+            mg += (j_l[1] - j_l[0]) * (j_l[1] - j_l[0]) * SpinChain::zxi_trip(s_l, s_l, s_c);
+            mg += (j_l[1] - j_l[0]) * (j_l[1] - j_l[0]) * SpinChain::zxi_trip(s_c, s_c, s_l);
+            mg += (j_l[1] - j_l[0])
+                * (j_r[1] - j_r[0])
+                * (SpinChain::zxi_trip(s_r, s_l, s_c) + SpinChain::zxi_trip(s_l, s_r, s_c));
+            mg += (j_ll[1] - j_ll[0])
+                * (j_l[1] - j_l[0])
+                * (SpinChain::zxi_trip(s_c, s_ll, s_l) + SpinChain::zxi_trip(s_ll, s_c, s_l));
+            mg += (j_r[1] - j_r[0])
+                * (j_rr[1] - j_rr[0])
+                * (SpinChain::zxi_trip(s_rr, s_c, s_r) + SpinChain::zxi_trip(s_c, s_rr, s_r));
+        }
+
+        e -= mg / (16.0 * om);
+
+        e / (h as f64)
     }
 
     pub fn mc_system_energy(&self) -> f64 {

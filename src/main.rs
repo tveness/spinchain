@@ -95,6 +95,44 @@ fn estim_e(conf: &mut Config, beta: f64) -> f64 {
     //    println!("{:?}", e_samples);
     e_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64)
 }
+
+fn estim_e_maglab(conf: &mut Config, beta: f64) -> f64 {
+    let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+
+    sc.vars.beta = beta;
+    let samples: usize = 1000;
+    let mut e_samples: Vec<f64> = vec![0.0; samples];
+    //let omega: f64 = 2.0 * PI / conf.tau;
+
+    for i in 0..samples {
+        for _ in 0..10000 {
+            sc.metropolis_update_maglab();
+        }
+        e_samples[i] = sc.mc_system_energy_maglab(); // + omega * sc.m()[2] / sc.vars.ssize as f64;
+    }
+
+    //    println!("{:?}", e_samples);
+    e_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64)
+}
+
+fn estim_e_rot(conf: &mut Config, beta: f64) -> f64 {
+    let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+
+    sc.vars.beta = beta;
+    let samples: usize = 1000;
+    let mut e_samples: Vec<f64> = vec![0.0; samples];
+    //let omega: f64 = 2.0 * PI / conf.tau;
+
+    for i in 0..samples {
+        for _ in 0..10000 {
+            sc.metropolis_update_rot_magnus();
+        }
+        e_samples[i] = sc.mc_system_energy_rot(); // + omega * sc.m()[2] / sc.vars.ssize as f64;
+    }
+
+    //    println!("{:?}", e_samples);
+    e_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64)
+}
 fn estim_e2(conf: &mut Config, beta: f64) -> f64 {
     let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
     //    println!("Field: {:?}", sc.static_h);
@@ -116,7 +154,7 @@ fn estim_e2(conf: &mut Config, beta: f64) -> f64 {
     e_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64)
 }
 fn estim_eh(conf: &mut Config, beta: f64) -> f64 {
-    let omega: f64 = 2.0 * PI / conf.tau;
+    // let omega: f64 = 2.0 * PI / conf.tau;
     let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
     //    println!("Field: {:?}", sc.static_h);
 
@@ -130,8 +168,7 @@ fn estim_eh(conf: &mut Config, beta: f64) -> f64 {
             sc.metropolis_update();
         }
         //        e_samples[i] = sc.mc_total_energy();
-        e_samples[i] =
-            sc.mc_total_energy();// + omega*sc.m()[2]/ sc.vars.ssize as f64;
+        e_samples[i] = sc.mc_total_energy(); // + omega*sc.m()[2]/ sc.vars.ssize as f64;
     }
 
     //    println!("{:?}", e_samples);
@@ -140,7 +177,7 @@ fn estim_eh(conf: &mut Config, beta: f64) -> f64 {
 
 fn find_betah(conf: &mut Config) -> f64 {
     let e_target = conf.ednsty;
-    let mut beta_low: f64 = 0.1;
+    let mut beta_low: f64 = 0.01;
     let mut beta_high: f64 = 5.0;
     let mut beta_mid: f64 = 0.5 * (beta_low + beta_high);
     //    println!("Target? {}", estim_e(conf,2.88));
@@ -175,7 +212,7 @@ fn find_betah(conf: &mut Config) -> f64 {
 
 fn find_beta2(conf: &mut Config) -> f64 {
     let e_target = conf.ednsty;
-    let mut beta_low: f64 = 0.1;
+    let mut beta_low: f64 = 0.01;
     let mut beta_high: f64 = 5.0;
     let mut beta_mid: f64 = 0.5 * (beta_low + beta_high);
     //    println!("Target? {}", estim_e(conf,2.88));
@@ -200,6 +237,78 @@ fn find_beta2(conf: &mut Config) -> f64 {
         }
         beta_mid = 0.5 * (beta_low + beta_high);
         e_mid = estim_e2(conf, beta_mid);
+
+        println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
+        println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
+    }
+
+    beta_mid
+}
+
+fn find_beta_maglab(conf: &mut Config) -> f64 {
+    let e_target = conf.ednsty;
+    let mut beta_low: f64 = 0.0001;
+    let mut beta_high: f64 = 5.0;
+    let mut beta_mid: f64 = 0.5 * (beta_low + beta_high);
+    //    conf.ssize = conf.hsize;
+    //    println!("Target? {}", estim_e(conf,2.88));
+
+    let mut e_low = estim_e_maglab(conf, beta_low);
+    let mut e_mid = estim_e_maglab(conf, beta_mid);
+    let mut e_high = estim_e_maglab(conf, beta_high);
+    println!("Target: {}", e_target);
+
+    println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
+    println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
+    while beta_high - beta_low > 0.001 {
+        //If middle energy is too high, then beta_mid is too low (i.e. beta_mid is hot)
+        if e_mid > e_target {
+            beta_low = beta_mid;
+            e_low = e_mid;
+        }
+        //Otherwise, energy is too low, increase temp i.e. lower beta_high
+        else {
+            beta_high = beta_mid;
+            e_high = e_mid;
+        }
+        beta_mid = 0.5 * (beta_low + beta_high);
+        e_mid = estim_e_maglab(conf, beta_mid);
+
+        println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
+        println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
+    }
+
+    beta_mid
+}
+
+fn find_beta_rot(conf: &mut Config) -> f64 {
+    let e_target = conf.ednsty;
+    let mut beta_low: f64 = 0.0001;
+    let mut beta_high: f64 = 5.0;
+    let mut beta_mid: f64 = 0.5 * (beta_low + beta_high);
+    //    conf.ssize = conf.hsize;
+    //    println!("Target? {}", estim_e(conf,2.88));
+
+    let mut e_low = estim_e_rot(conf, beta_low);
+    let mut e_mid = estim_e_rot(conf, beta_mid);
+    let mut e_high = estim_e_rot(conf, beta_high);
+    println!("Target: {}", e_target);
+
+    println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
+    println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
+    while beta_high - beta_low > 0.001 {
+        //If middle energy is too high, then beta_mid is too low (i.e. beta_mid is hot)
+        if e_mid > e_target {
+            beta_low = beta_mid;
+            e_low = e_mid;
+        }
+        //Otherwise, energy is too low, increase temp i.e. lower beta_high
+        else {
+            beta_high = beta_mid;
+            e_high = e_mid;
+        }
+        beta_mid = 0.5 * (beta_low + beta_high);
+        e_mid = estim_e_rot(conf, beta_mid);
 
         println!("low: {}, mid: {}, high: {}", beta_low, beta_mid, beta_high);
         println!("elow: {}, emid:{}, ehigh: {}", e_low, e_mid, e_high);
@@ -242,6 +351,74 @@ fn find_beta(conf: &mut Config) -> f64 {
     }
 
     beta_mid
+}
+
+fn get_obs_maglab(conf: &mut Config) -> [f64; 4] {
+    //    println!("Target? {}", estim_e(conf,2.88));
+    //
+    conf.ssize = conf.hsize;
+
+    let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+
+    let samples: usize = 8000;
+    let mut e_samples: Vec<f64> = vec![0.0; samples];
+    let mut mx_samples: Vec<f64> = vec![0.0; samples];
+    let mut my_samples: Vec<f64> = vec![0.0; samples];
+    let mut mz_samples: Vec<f64> = vec![0.0; samples];
+
+    for i in 0..samples {
+        for _ in 0..10000 {
+            sc.metropolis_update_maglab();
+        }
+
+        e_samples[i] = sc.mc_system_energy() + sc.m()[0] / sc.vars.ssize as f64;
+        mx_samples[i] = sc.m()[0] / sc.vars.ssize as f64;
+        my_samples[i] = sc.m()[1] / sc.vars.ssize as f64;
+        mz_samples[i] = sc.m()[2] / sc.vars.ssize as f64;
+    }
+
+    //    println!("{:?}", e_samples);
+    [
+        e_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+        mx_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+        my_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+        mz_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+    ]
+}
+
+///Get observations by MC-sampling from Magnus enemble, but evaluating regular observables
+fn get_obs_rot(conf: &mut Config) -> [f64; 4] {
+    //    println!("Target? {}", estim_e(conf,2.88));
+    //
+    conf.ssize = conf.hsize;
+
+    let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+
+    let samples: usize = 8000;
+    let mut e_samples: Vec<f64> = vec![0.0; samples];
+    let mut mx_samples: Vec<f64> = vec![0.0; samples];
+    let mut my_samples: Vec<f64> = vec![0.0; samples];
+    let mut mz_samples: Vec<f64> = vec![0.0; samples];
+
+    for i in 0..samples {
+        for _ in 0..10000 {
+            sc.metropolis_update_rot_magnus();
+        }
+
+        //e_samples[i] = sc.mc_system_energy_rot();
+        e_samples[i] = sc.mc_system_energy() + sc.m()[0] / sc.vars.ssize as f64;
+        mx_samples[i] = sc.m()[0] / sc.vars.ssize as f64;
+        my_samples[i] = sc.m()[1] / sc.vars.ssize as f64;
+        mz_samples[i] = sc.m()[2] / sc.vars.ssize as f64;
+    }
+
+    //    println!("{:?}", e_samples);
+    [
+        e_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+        mx_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+        my_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+        mz_samples.iter().fold(0.0, |acc, x| acc + x) / (samples as f64),
+    ]
 }
 
 fn get_obsh(conf: &mut Config) -> [f64; 4] {
@@ -1191,6 +1368,20 @@ fn main() {
             .help("Find adiabatic ensemble H-\\omega S^z inhomogeneous"),
             )
         .arg(
+            Arg::with_name("rot").allow_hyphen_values(true)
+            .value_name("E")
+            .takes_value(true)
+            .long("rot-frame")
+            .help("Fit temperature of Monte-Carlo ensemble with energy density E in rotating frame")
+            )
+        .arg(
+            Arg::with_name("maglab").allow_hyphen_values(true)
+            .value_name("E")
+            .takes_value(true)
+            .long("magnus-fit")
+            .help("Fit temperature of Monte-Carlo ensemble with energy density E in lab frame, leading Magnus")
+            )
+        .arg(
             Arg::with_name("steps")
             .value_name("STEPS")
             .long("steps")
@@ -1216,7 +1407,7 @@ fn main() {
             .value_name("E")
             .short("H")
             .takes_value(true)
-            .help("Calculate effective ensemble with initla temp and first-order Magnus")
+            .help("Calculate effective ensemble with initial temp and first-order Magnus")
             )
 	.arg(
 	    Arg::with_name("ext")
@@ -1284,6 +1475,60 @@ fn main() {
 
         default = false;
     }
+    if let Some(targete) = matches.value_of("rot") {
+        println!("Evaluating with first-order correction in rot frame");
+        //Start with no extra fields paplied to chain
+        conf.ednsty = targete.parse::<f64>().unwrap();
+
+        // find_beta_rot does Monte-Carlo updates with additional fields, and also evaluates energy
+        // with additional fields
+        let result: f64 = find_beta_rot(&mut conf);
+        conf.beta = result;
+
+        let betat_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("betat-rot.dat")
+            .unwrap();
+
+        let results: [f64; 4] = get_obs_rot(&mut conf);
+
+        writeln!(
+            &betat_file,
+            "{} {} {} {} {} {} {}",
+            conf.tau, targete, conf.beta, results[0], results[1], results[2], results[3]
+        )
+        .unwrap();
+
+        default = false;
+    }
+    if let Some(targete) = matches.value_of("maglab") {
+        println!("Evaluating with first-order correction in lab frame");
+        //Start with no extra fields paplied to chain
+        conf.ednsty = targete.parse::<f64>().unwrap();
+
+        // find_beta_rot does Monte-Carlo updates with additional fields, and also evaluates energy
+        // with additional fields
+        let result: f64 = find_beta_maglab(&mut conf);
+        conf.beta = result;
+
+        let betat_file = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open("betat-maglab.dat")
+            .unwrap();
+
+        let results: [f64; 4] = get_obs_maglab(&mut conf);
+
+        writeln!(
+            &betat_file,
+            "{} {} {} {} {} {} {}",
+            conf.tau, targete, conf.beta, results[0], results[1], results[2], results[3]
+        )
+        .unwrap();
+
+        default = false;
+    }
 
     if let Some(targete) = matches.value_of("fit") {
         conf.ednsty = targete.parse::<f64>().unwrap();
@@ -1317,7 +1562,7 @@ fn main() {
         conf.ednsty = targete.parse::<f64>().unwrap();
         conf.hs = vec![1.0, 0.0, 0.0];
         conf.hfield = vec![0.0, 0.0, -2.0 * PI / conf.tau];
-//        conf.hsize = conf.ssize;
+        //        conf.hsize = conf.ssize;
 
         let result: f64 = find_betah(&mut conf);
         conf.beta = result;
@@ -1342,12 +1587,10 @@ fn main() {
         default = false;
     }
     if let Some(targete) = matches.value_of("high-freq") {
-
         conf.ednsty = targete.parse::<f64>().unwrap();
 
-        conf.hfield = vec![0.0, 0.0, -conf.tau/(4.0 * PI)];
-//        conf.hsize = conf.ssize;
-
+        conf.hfield = vec![0.0, 0.0, -conf.tau / (4.0 * PI)];
+        //        conf.hsize = conf.ssize;
 
         let results: [f64; 4] = get_obsh(&mut conf);
 
