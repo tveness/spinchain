@@ -490,6 +490,7 @@ fn gen_hist_magnus(conf: &mut Config, sample_num: usize) {
     conf.drive = DriveType::none;
     conf.file = "x".to_string();
     let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
+    let s: f64 = sc.vars.ssize as f64;
 
     let mc_hist = OpenOptions::new()
         .create(true)
@@ -525,12 +526,20 @@ fn gen_hist_magnus(conf: &mut Config, sample_num: usize) {
         let my: f64 = sc.m()[1] / sc.vars.ssize as f64;
         let mz: f64 = sc.m()[2] / sc.vars.ssize as f64;
         let ed: f64 = sc.system_energy();
+        let sm: [f64; 3] = sc.spins[(s / 4.0) as usize].dir;
+        let sp: [f64; 3] = sc.spins[(3.0 * s / 4.0) as usize].dir;
+
         mx_avg += mx;
         my_avg += my;
         mz_avg += mz;
         ed_avg += ed;
 
-        writeln!(&mc_hist, "{} {} {} {} {}", i, mx, my, mz, ed).unwrap();
+        writeln!(
+            &mc_hist,
+            "{} {} {} {} {} {} {} {} {} {} {}",
+            i, mx, my, mz, ed, sm[0], sm[1], sm[2], sp[0], sp[1], sp[2]
+        )
+        .unwrap();
 
         pb.inc(1);
     }
@@ -783,8 +792,16 @@ fn gen_hist(conf: &mut Config, sample_num: usize) {
         let my: f64 = sc.m()[1] / sc.vars.ssize as f64;
         let mz: f64 = sc.m()[2] / sc.vars.ssize as f64;
         let ed: f64 = sc.system_energy();
+        let s: f64 = sc.vars.ssize as f64;
+        let sm: [f64; 3] = sc.spins[(s / 4.0) as usize].dir;
+        let sp: [f64; 3] = sc.spins[(3.0 * s / 4.0) as usize].dir;
 
-        writeln!(&mc_hist, "{} {} {} {} {}", i, mx, my, mz, ed).unwrap();
+        writeln!(
+            &mc_hist,
+            "{} {} {} {} {} {} {} {} {} {} {}",
+            i, mx, my, mz, ed, sm[0], sm[1], sm[2], sp[0], sp[1], sp[2]
+        )
+        .unwrap();
 
         pb.inc(1);
     }
@@ -1249,8 +1266,13 @@ fn run_mc(conf: &mut Config) {
                 let e: f64 = sc.total_energy2();
                 let es: f64 = sc.mc_system_energy();
 
-                let formatted_string: String =
-                    format!("{} {} {} {} {}", e, es, ms[0], ms[1], ms[2]);
+                let s: f64 = sc.vars.ssize as f64;
+                let sm: [f64; 3] = sc.spins[(s / 4.0) as usize].dir;
+                let sp: [f64; 3] = sc.spins[(3.0 * s / 4.0) as usize].dir;
+                let formatted_string: String = format!(
+                    "{} {} {} {} {} {} {} {} {} {} {}",
+                    e, es, ms[0], ms[1], ms[2], sm[0], sm[1], sm[2], sp[0], sp[1], sp[2]
+                );
                 txc.send(formatted_string).unwrap();
                 pb.inc(1);
             }

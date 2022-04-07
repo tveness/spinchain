@@ -676,11 +676,12 @@ impl SpinChain {
         let s: f64 = self.vars.ssize as f64;
 
         //Also calculate boundary terms
-        let boundary_term: f64 = self.boundary_term();
-
+        //        let boundary_term: f64 = self.boundary_term();
+        let sm: [f64; 3] = self.spins[(s / 4.0) as usize].dir;
+        let sp: [f64; 3] = self.spins[(3.0 * s / 4.0) as usize].dir;
         writeln!(
             &self.file,
-            "{} {} {} {} {} {} {} {}",
+            "{} {} {} {} {} {} {} {} {} {} {} {} {}",
             self.t,
             es,
             e,
@@ -688,7 +689,12 @@ impl SpinChain {
             m[1] / s,
             m[2] / s,
             mt[2] / self.vars.hsize as f64,
-            boundary_term
+            sm[0],
+            sm[1],
+            sm[2],
+            sp[0],
+            sp[1],
+            sp[2] 
         )
         .unwrap();
 
