@@ -952,7 +952,8 @@ fn run_langevin(conf: &mut Config, gamma: f64) {
                 spin_chain.metropolis_update();
             }
             pb.reset_eta();
-            let tau_steps: u64 = (spin_chain.vars.tau / spin_chain.vars.dt) as u64;
+            //Round is necessary!
+            let tau_steps: u64 = (spin_chain.vars.tau / spin_chain.vars.dt).round() as u64;
 
             spin_chain.log();
 
