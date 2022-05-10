@@ -504,6 +504,439 @@ impl SpinChain {
     //
     //-1/(2 omega) * \sum_{j=1}^\ell S^z_j 2 * y .
 
+    pub fn metropolis_update_mag_full(&mut self) {
+        let mut rng = rand::thread_rng();
+        let unif = Uniform::from(0.0..1.0);
+
+        //When calling this, hsize should equal ssize
+
+        // Select a spin at random from the chain
+        let s: usize = self.vars.hsize as usize;
+        let index: usize = rng.gen_range(0, s) as usize;
+
+        let om: f64 = 2.0 * PI / self.vars.tau;
+
+        let local_field: [f64; 3] = self.static_h[index];
+
+        //Calculate initial energy
+        //First get left and right spins and couplings
+        let s_j: &Spin = &self.spins[index];
+
+        let s_jm1: &Spin = match index {
+            _ if index == 0 => &self.spins[s - 1],
+            _ => &self.spins[index - 1],
+        };
+
+        let s_jp1: &Spin = match index {
+            _ if index == s - 1 => &self.spins[0],
+            _ => &self.spins[index + 1],
+        };
+
+        let s_jp2: &Spin = match index {
+            _ if index == s - 2 => &self.spins[0],
+            _ if index == s - 1 => &self.spins[1],
+            _ => &self.spins[index + 2],
+        };
+        let s_jm2: &Spin = match index {
+            _ if index == 0 => &self.spins[s - 2],
+            _ if index == 1 => &self.spins[s - 1],
+            _ => &self.spins[index - 2],
+        };
+
+        let j_jm1: &[f64; 3] = match index {
+            _ if index == 0 => &self.j_couple[s - 1],
+            _ => &self.j_couple[index - 1],
+        };
+
+        let j_jp1: &[f64; 3] = match index {
+            _ if index == s - 1 => &self.j_couple[0],
+            _ => &self.j_couple[index + 1],
+        };
+        let j_jm2: &[f64; 3] = match index {
+            _ if index == 0 => &self.j_couple[s - 2],
+            _ if index == 1 => &self.j_couple[s - 1],
+            _ => &self.j_couple[index - 2],
+        };
+
+        let j_j: &[f64; 3] = &self.j_couple[index];
+
+        //Calculate energy before randomising a spin
+        let mut ei0: f64 = 0.0;
+        let mut ei1: f64 = 0.0;
+        let mut ei2: f64 = 0.0;
+
+        for k in 0..3 {
+            // S J S terms, i.e. \Omega_1
+            // Because j->j+1, flipping j effects *two* terms in the energy
+            ei0 -= s_jm1.dir[k] * j_jm1[k] * s_j.dir[k];
+            ei0 -= s_j.dir[k] * j_j[k] * s_jp1.dir[k];
+        }
+
+        //-(1)/(2 \omega) (  S^z + 2y . (J_j S_{j+1} + J_{j-1} S_{j-1}) x S_j )
+        // Because j-1->j->j+1, flipping j effects *three* terms in the energy
+        // But only if the field is non-zero at site j
+        if index < self.vars.ssize as usize {
+            ei1 -= s_j.dir[2] / 2.0;
+            ei1 -= (j_jm1[2] - j_jm1[0]) * (s_jm1.dir[0] * s_j.dir[2] + s_jm1.dir[2] * s_j.dir[0]);
+            ei1 -= (j_j[2] - j_j[0]) * (s_jp1.dir[0] * s_j.dir[2] + s_jp1.dir[2] * s_j.dir[0]);
+        }
+
+        if index < self.vars.ssize as usize {
+            ei2 += s_j.dir[0] / 2.0;
+            ei2 -=
+                0.5 * (j_jm1[1] * s_j.dir[2] * s_jm1.dir[2] + j_j[1] * s_j.dir[2] * s_jp1.dir[2]);
+            ei2 -=
+                0.5 * (j_jm1[2] * s_j.dir[1] * s_jm1.dir[1] + j_j[2] * s_j.dir[1] * s_jp1.dir[1]);
+            ei2 -=
+                1.5 * (j_jm1[0] * s_j.dir[2] * s_jm1.dir[2] + j_j[0] * s_j.dir[2] * s_jp1.dir[2]);
+            ei2 -=
+                1.5 * (j_jm1[2] * s_j.dir[0] * s_jm1.dir[0] + j_j[2] * s_j.dir[0] * s_jp1.dir[0]);
+
+            //First term
+            ei2 += (j_jm1[0] * s_jm1.dir[0] + j_j[0] * s_jp1.dir[0])
+                * (s_j.dir[0] * (j_jm1[0] * s_jm1.dir[0] + j_j[0] * s_jp1.dir[0])
+                    + s_j.dir[1] * (j_jm1[1] * s_jm1.dir[1] + j_j[1] * s_jp1.dir[1])
+                    + s_j.dir[2] * (j_jm1[2] * s_jm1.dir[2] + j_j[2] * s_jp1.dir[2]));
+            ei2 -= s_j.dir[0]
+                * ((j_jm1[0] * s_jm1.dir[0] + j_j[0] * s_jp1.dir[0])
+                    * (j_jm1[0] * s_jm1.dir[0] + j_j[0] * s_jp1.dir[0])
+                    + (j_jm1[1] * s_jm1.dir[1] + j_j[1] * s_jp1.dir[1])
+                        * (j_jm1[1] * s_jm1.dir[1] + j_j[1] * s_jp1.dir[1])
+                    + (j_jm1[2] * s_jm1.dir[2] + j_j[2] * s_jp1.dir[2])
+                        * (j_jm1[2] * s_jm1.dir[2] + j_j[2] * s_jp1.dir[2]));
+            //Translations of first term +1
+            ei2 += (j_j[0] * s_j.dir[0] + j_jp1[0] * s_jp2.dir[0])
+                * (s_jp1.dir[0] * (j_j[0] * s_j.dir[0] + j_jp1[0] * s_jp2.dir[0])
+                    + s_jp1.dir[1] * (j_j[1] * s_j.dir[1] + j_jp1[1] * s_jp2.dir[1])
+                    + s_jp1.dir[2] * (j_j[2] * s_j.dir[2] + j_jp1[2] * s_jp2.dir[2]));
+            ei2 -= s_jp1.dir[0]
+                * ((j_j[0] * s_j.dir[0] + j_jp1[0] * s_jp2.dir[0])
+                    * (j_jm2[0] * s_jm2.dir[0] + j_jp1[0] * s_jp2.dir[0])
+                    + (j_j[1] * s_j.dir[1] + j_jp1[1] * s_jp2.dir[1])
+                        * (j_j[1] * s_j.dir[1] + j_jp1[1] * s_jp2.dir[1])
+                    + (j_j[2] * s_j.dir[2] + j_jp1[2] * s_jp2.dir[2])
+                        * (j_j[2] * s_j.dir[2] + j_jp1[2] * s_jp2.dir[2]));
+            //Translations of first term -1
+            ei2 += (j_jm2[0] * s_jm2.dir[0] + j_jm1[0] * s_j.dir[0])
+                * (s_jm1.dir[0] * (j_jm2[0] * s_jm2.dir[0] + j_jm1[0] * s_j.dir[0])
+                    + s_jm1.dir[1] * (j_jm2[1] * s_jm2.dir[1] + j_jm1[1] * s_j.dir[1])
+                    + s_jm1.dir[2] * (j_jm2[2] * s_jm2.dir[2] + j_jm1[2] * s_j.dir[2]));
+            ei2 -= s_jm1.dir[0]
+                * ((j_jm2[0] * s_jm2.dir[0] + j_jm1[0] * s_j.dir[0])
+                    * (j_jm2[0] * s_jm2.dir[0] + j_jm1[0] * s_j.dir[0])
+                    + (j_jm2[1] * s_jm2.dir[1] + j_jm1[1] * s_j.dir[1])
+                        * (j_jm2[1] * s_jm2.dir[1] + j_jm1[1] * s_j.dir[1])
+                    + (j_jm2[2] * s_jm2.dir[2] + j_jm1[2] * s_j.dir[2])
+                        * (j_jm2[2] * s_jm2.dir[2] + j_jm1[2] * s_j.dir[2]));
+
+            //Second term
+
+            ei2 += (j_jm2[2] * s_jm2.dir[2] * s_jm1.dir[0]
+                - j_jm2[0] * s_jm2.dir[0] * s_jm1.dir[2])
+                * j_jm1[1]
+                * s_j.dir[2];
+            ei2 -= (j_jm2[0] * s_jm2.dir[0] * s_jm1.dir[1]
+                - j_jm2[1] * s_jm2.dir[1] * s_jm1.dir[0])
+                * j_jm1[2]
+                * s_j.dir[1];
+
+            ei2 += (j_jm1[2] * s_j.dir[2] * s_jm1.dir[0] - j_jm1[0] * s_j.dir[0] * s_jm1.dir[2])
+                * j_jm1[1]
+                * s_j.dir[2];
+            ei2 -= (j_jm1[0] * s_j.dir[0] * s_jm1.dir[1] - j_jm1[1] * s_j.dir[1] * s_jm1.dir[0])
+                * j_jm1[2]
+                * s_j.dir[1];
+
+            // Translations of second term +1
+            ei2 += (j_jm1[2] * s_jm1.dir[2] * s_j.dir[0] - j_jm1[0] * s_jm1.dir[0] * s_j.dir[2])
+                * j_j[1]
+                * s_jp1.dir[2];
+            ei2 -= (j_jm1[0] * s_jm1.dir[0] * s_j.dir[1] - j_jm1[1] * s_jm1.dir[1] * s_j.dir[0])
+                * j_j[2]
+                * s_jp1.dir[1];
+
+            ei2 += (j_j[2] * s_jp1.dir[2] * s_j.dir[0] - j_j[0] * s_jp1.dir[0] * s_j.dir[2])
+                * j_j[1]
+                * s_jp1.dir[2];
+            ei2 -= (j_j[0] * s_jp1.dir[0] * s_j.dir[1] - j_j[1] * s_jp1.dir[1] * s_j.dir[0])
+                * j_j[2]
+                * s_jp1.dir[1];
+
+            // Translations of second term +2
+            ei2 += (j_j[2] * s_j.dir[2] * s_jp1.dir[0] - j_j[0] * s_j.dir[0] * s_jp1.dir[2])
+                * j_jp1[1]
+                * s_jp2.dir[2];
+            ei2 -= (j_j[0] * s_j.dir[0] * s_jp1.dir[1] - j_j[1] * s_j.dir[1] * s_jp1.dir[0])
+                * j_jp1[2]
+                * s_jp2.dir[1];
+
+            ei2 += (j_jp1[2] * s_jp2.dir[2] * s_jp1.dir[0]
+                - j_jp1[0] * s_jp2.dir[0] * s_jp1.dir[2])
+                * j_jp1[1]
+                * s_jp2.dir[2];
+            ei2 -= (j_jp1[0] * s_jp2.dir[0] * s_jp1.dir[1]
+                - j_jp1[1] * s_jp2.dir[1] * s_jp1.dir[0])
+                * j_jp1[2]
+                * s_jp2.dir[1];
+
+            // Third term
+
+            ei2 += (j_j[2] * s_j.dir[2] * s_jp1.dir[0] - j_j[0] * s_j.dir[0] * s_jp1.dir[2])
+                * j_j[1]
+                * s_j.dir[2];
+            ei2 -= (j_j[0] * s_j.dir[0] * s_jp1.dir[1] - j_j[1] * s_j.dir[1] * s_jp1.dir[0])
+                * j_j[2]
+                * s_j.dir[1];
+
+            ei2 += (j_jp1[2] * s_jp2.dir[2] * s_jp1.dir[0]
+                - j_jp1[0] * s_jp2.dir[0] * s_jp1.dir[2])
+                * j_j[1]
+                * s_j.dir[2];
+            ei2 -= (j_jp1[0] * s_jp2.dir[0] * s_jp1.dir[1]
+                - j_jp1[1] * s_jp2.dir[1] * s_jp1.dir[0])
+                * j_j[2]
+                * s_j.dir[1];
+
+            // Translations of third term -1
+            ei2 += (j_jm1[2] * s_jm1.dir[2] * s_j.dir[0] - j_jm1[0] * s_jm1.dir[0] * s_j.dir[2])
+                * j_jm1[1]
+                * s_jm1.dir[2];
+            ei2 -= (j_jm1[0] * s_jm1.dir[0] * s_j.dir[1] - j_jm1[1] * s_jm1.dir[1] * s_j.dir[0])
+                * j_jm1[2]
+                * s_jm1.dir[1];
+
+            ei2 += (j_j[2] * s_jp1.dir[2] * s_j.dir[0] - j_j[0] * s_jp1.dir[0] * s_j.dir[2])
+                * j_jm1[1]
+                * s_jm1.dir[2];
+            ei2 -= (j_j[0] * s_jp1.dir[0] * s_j.dir[1] - j_j[1] * s_jp1.dir[1] * s_j.dir[0])
+                * j_jm1[2]
+                * s_jm1.dir[1];
+
+            // Translations of third term -2
+            ei2 += (j_jm2[2] * s_jm2.dir[2] * s_jm1.dir[0]
+                - j_jm2[0] * s_jm2.dir[0] * s_jm1.dir[2])
+                * j_jm2[1]
+                * s_jm2.dir[2];
+            ei2 -= (j_jm2[0] * s_jm2.dir[0] * s_jm1.dir[1]
+                - j_jm2[1] * s_jm2.dir[1] * s_jm1.dir[0])
+                * j_jm2[2]
+                * s_jm2.dir[1];
+
+            ei2 += (j_jm1[2] * s_j.dir[2] * s_jm1.dir[0] - j_jm1[0] * s_j.dir[0] * s_jm1.dir[2])
+                * j_jm2[1]
+                * s_jm2.dir[2];
+            ei2 -= (j_jm1[0] * s_j.dir[0] * s_jm1.dir[1] - j_jm1[1] * s_j.dir[1] * s_jm1.dir[0])
+                * j_jm2[2]
+                * s_jm2.dir[1];
+        }
+
+        let ei: f64 = ei0 + ei1 / om + ei2 / (om * om);
+
+        // Select random angles
+        let theta: f64 = 2.0 * PI * unif.sample(&mut rng);
+        let phi: f64 = (1.0 - 2.0 * unif.sample(&mut rng)).acos();
+        let new_spin: Spin = Spin::new_from_angles(theta, phi);
+
+        //Calculate difference in energy with randomised spin
+        let mut de: f64 = -ei;
+        let mut de0: f64 = 0.0;
+        let mut de1: f64 = 0.0;
+        let mut de2: f64 = 0.0;
+
+        // Difference with before: s_j -> new_spin
+
+        for k in 0..3 {
+            de0 -=
+                s_jm1.dir[k] * j_jm1[k] * new_spin.dir[k] + new_spin.dir[k] * j_j[k] * s_jp1.dir[k];
+        }
+
+        if index < self.vars.ssize as usize {
+            de1 -= new_spin.dir[2] / 2.0;
+            de1 -= (j_jm1[2] - j_jm1[0])
+                * (s_jm1.dir[0] * new_spin.dir[2] + s_jm1.dir[2] * new_spin.dir[0]);
+            de1 -= (j_j[2] - j_j[0])
+                * (s_jp1.dir[0] * new_spin.dir[2] + s_jp1.dir[2] * new_spin.dir[0]);
+        }
+
+        if index < self.vars.ssize as usize {
+            de2 += new_spin.dir[0] / 2.0;
+            de2 -= 0.5
+                * (j_jm1[1] * new_spin.dir[2] * s_jm1.dir[2]
+                    + j_j[1] * new_spin.dir[2] * s_jp1.dir[2]);
+            de2 -= 0.5
+                * (j_jm1[2] * new_spin.dir[1] * s_jm1.dir[1]
+                    + j_j[2] * new_spin.dir[1] * s_jp1.dir[1]);
+            de2 -= 1.5
+                * (j_jm1[0] * new_spin.dir[2] * s_jm1.dir[2]
+                    + j_j[0] * new_spin.dir[2] * s_jp1.dir[2]);
+            de2 -= 1.5
+                * (j_jm1[2] * new_spin.dir[0] * s_jm1.dir[0]
+                    + j_j[2] * new_spin.dir[0] * s_jp1.dir[0]);
+
+            //First term
+            de2 += (j_jm1[0] * s_jm1.dir[0] + j_j[0] * s_jp1.dir[0])
+                * (new_spin.dir[0] * (j_jm1[0] * s_jm1.dir[0] + j_j[0] * s_jp1.dir[0])
+                    + new_spin.dir[1] * (j_jm1[1] * s_jm1.dir[1] + j_j[1] * s_jp1.dir[1])
+                    + new_spin.dir[2] * (j_jm1[2] * s_jm1.dir[2] + j_j[2] * s_jp1.dir[2]));
+            de2 -= new_spin.dir[0]
+                * ((j_jm1[0] * s_jm1.dir[0] + j_j[0] * s_jp1.dir[0])
+                    * (j_jm1[0] * s_jm1.dir[0] + j_j[0] * s_jp1.dir[0])
+                    + (j_jm1[1] * s_jm1.dir[1] + j_j[1] * s_jp1.dir[1])
+                        * (j_jm1[1] * s_jm1.dir[1] + j_j[1] * s_jp1.dir[1])
+                    + (j_jm1[2] * s_jm1.dir[2] + j_j[2] * s_jp1.dir[2])
+                        * (j_jm1[2] * s_jm1.dir[2] + j_j[2] * s_jp1.dir[2]));
+            //Translations of first term +1
+            de2 += (j_j[0] * new_spin.dir[0] + j_jp1[0] * s_jp2.dir[0])
+                * (s_jp1.dir[0] * (j_j[0] * new_spin.dir[0] + j_jp1[0] * s_jp2.dir[0])
+                    + s_jp1.dir[1] * (j_j[1] * new_spin.dir[1] + j_jp1[1] * s_jp2.dir[1])
+                    + s_jp1.dir[2] * (j_j[2] * new_spin.dir[2] + j_jp1[2] * s_jp2.dir[2]));
+            de2 -= s_jp1.dir[0]
+                * ((j_j[0] * new_spin.dir[0] + j_jp1[0] * s_jp2.dir[0])
+                    * (j_jm2[0] * s_jm2.dir[0] + j_jp1[0] * s_jp2.dir[0])
+                    + (j_j[1] * new_spin.dir[1] + j_jp1[1] * s_jp2.dir[1])
+                        * (j_j[1] * new_spin.dir[1] + j_jp1[1] * s_jp2.dir[1])
+                    + (j_j[2] * new_spin.dir[2] + j_jp1[2] * s_jp2.dir[2])
+                        * (j_j[2] * new_spin.dir[2] + j_jp1[2] * s_jp2.dir[2]));
+            //Translations of first term -1
+            de2 += (j_jm2[0] * s_jm2.dir[0] + j_jm1[0] * new_spin.dir[0])
+                * (s_jm1.dir[0] * (j_jm2[0] * s_jm2.dir[0] + j_jm1[0] * new_spin.dir[0])
+                    + s_jm1.dir[1] * (j_jm2[1] * s_jm2.dir[1] + j_jm1[1] * new_spin.dir[1])
+                    + s_jm1.dir[2] * (j_jm2[2] * s_jm2.dir[2] + j_jm1[2] * new_spin.dir[2]));
+            de2 -= s_jm1.dir[0]
+                * ((j_jm2[0] * s_jm2.dir[0] + j_jm1[0] * new_spin.dir[0])
+                    * (j_jm2[0] * s_jm2.dir[0] + j_jm1[0] * new_spin.dir[0])
+                    + (j_jm2[1] * s_jm2.dir[1] + j_jm1[1] * new_spin.dir[1])
+                        * (j_jm2[1] * s_jm2.dir[1] + j_jm1[1] * new_spin.dir[1])
+                    + (j_jm2[2] * s_jm2.dir[2] + j_jm1[2] * new_spin.dir[2])
+                        * (j_jm2[2] * s_jm2.dir[2] + j_jm1[2] * new_spin.dir[2]));
+
+            //Second term
+
+            de2 += (j_jm2[2] * s_jm2.dir[2] * s_jm1.dir[0]
+                - j_jm2[0] * s_jm2.dir[0] * s_jm1.dir[2])
+                * j_jm1[1]
+                * new_spin.dir[2];
+            de2 -= (j_jm2[0] * s_jm2.dir[0] * s_jm1.dir[1]
+                - j_jm2[1] * s_jm2.dir[1] * s_jm1.dir[0])
+                * j_jm1[2]
+                * new_spin.dir[1];
+
+            de2 += (j_jm1[2] * new_spin.dir[2] * s_jm1.dir[0]
+                - j_jm1[0] * new_spin.dir[0] * s_jm1.dir[2])
+                * j_jm1[1]
+                * new_spin.dir[2];
+            de2 -= (j_jm1[0] * new_spin.dir[0] * s_jm1.dir[1]
+                - j_jm1[1] * new_spin.dir[1] * s_jm1.dir[0])
+                * j_jm1[2]
+                * new_spin.dir[1];
+
+            // Translations of second term +1
+            de2 += (j_jm1[2] * s_jm1.dir[2] * new_spin.dir[0]
+                - j_jm1[0] * s_jm1.dir[0] * new_spin.dir[2])
+                * j_j[1]
+                * s_jp1.dir[2];
+            de2 -= (j_jm1[0] * s_jm1.dir[0] * new_spin.dir[1]
+                - j_jm1[1] * s_jm1.dir[1] * new_spin.dir[0])
+                * j_j[2]
+                * s_jp1.dir[1];
+
+            de2 += (j_j[2] * s_jp1.dir[2] * new_spin.dir[0]
+                - j_j[0] * s_jp1.dir[0] * new_spin.dir[2])
+                * j_j[1]
+                * s_jp1.dir[2];
+            de2 -= (j_j[0] * s_jp1.dir[0] * new_spin.dir[1]
+                - j_j[1] * s_jp1.dir[1] * new_spin.dir[0])
+                * j_j[2]
+                * s_jp1.dir[1];
+
+            // Translations of second term +2
+            de2 += (j_j[2] * new_spin.dir[2] * s_jp1.dir[0]
+                - j_j[0] * new_spin.dir[0] * s_jp1.dir[2])
+                * j_jp1[1]
+                * s_jp2.dir[2];
+            de2 -= (j_j[0] * new_spin.dir[0] * s_jp1.dir[1]
+                - j_j[1] * new_spin.dir[1] * s_jp1.dir[0])
+                * j_jp1[2]
+                * s_jp2.dir[1];
+
+            de2 += (j_jp1[2] * s_jp2.dir[2] * s_jp1.dir[0]
+                - j_jp1[0] * s_jp2.dir[0] * s_jp1.dir[2])
+                * j_jp1[1]
+                * s_jp2.dir[2];
+            de2 -= (j_jp1[0] * s_jp2.dir[0] * s_jp1.dir[1]
+                - j_jp1[1] * s_jp2.dir[1] * s_jp1.dir[0])
+                * j_jp1[2]
+                * s_jp2.dir[1];
+
+            // Third term
+
+            de2 += (j_j[2] * new_spin.dir[2] * s_jp1.dir[0]
+                - j_j[0] * new_spin.dir[0] * s_jp1.dir[2])
+                * j_j[1]
+                * new_spin.dir[2];
+            de2 -= (j_j[0] * new_spin.dir[0] * s_jp1.dir[1]
+                - j_j[1] * new_spin.dir[1] * s_jp1.dir[0])
+                * j_j[2]
+                * new_spin.dir[1];
+
+            de2 += (j_jp1[2] * s_jp2.dir[2] * s_jp1.dir[0]
+                - j_jp1[0] * s_jp2.dir[0] * s_jp1.dir[2])
+                * j_j[1]
+                * new_spin.dir[2];
+            de2 -= (j_jp1[0] * s_jp2.dir[0] * s_jp1.dir[1]
+                - j_jp1[1] * s_jp2.dir[1] * s_jp1.dir[0])
+                * j_j[2]
+                * new_spin.dir[1];
+
+            // Translations of third term -1
+            de2 += (j_jm1[2] * s_jm1.dir[2] * new_spin.dir[0]
+                - j_jm1[0] * s_jm1.dir[0] * new_spin.dir[2])
+                * j_jm1[1]
+                * s_jm1.dir[2];
+            de2 -= (j_jm1[0] * s_jm1.dir[0] * new_spin.dir[1]
+                - j_jm1[1] * s_jm1.dir[1] * new_spin.dir[0])
+                * j_jm1[2]
+                * s_jm1.dir[1];
+
+            de2 += (j_j[2] * s_jp1.dir[2] * new_spin.dir[0]
+                - j_j[0] * s_jp1.dir[0] * new_spin.dir[2])
+                * j_jm1[1]
+                * s_jm1.dir[2];
+            de2 -= (j_j[0] * s_jp1.dir[0] * new_spin.dir[1]
+                - j_j[1] * s_jp1.dir[1] * new_spin.dir[0])
+                * j_jm1[2]
+                * s_jm1.dir[1];
+
+            // Translations of third term -2
+            de2 += (j_jm2[2] * s_jm2.dir[2] * s_jm1.dir[0]
+                - j_jm2[0] * s_jm2.dir[0] * s_jm1.dir[2])
+                * j_jm2[1]
+                * s_jm2.dir[2];
+            de2 -= (j_jm2[0] * s_jm2.dir[0] * s_jm1.dir[1]
+                - j_jm2[1] * s_jm2.dir[1] * s_jm1.dir[0])
+                * j_jm2[2]
+                * s_jm2.dir[1];
+
+            de2 += (j_jm1[2] * new_spin.dir[2] * s_jm1.dir[0]
+                - j_jm1[0] * new_spin.dir[0] * s_jm1.dir[2])
+                * j_jm2[1]
+                * s_jm2.dir[2];
+            de2 -= (j_jm1[0] * new_spin.dir[0] * s_jm1.dir[1]
+                - j_jm1[1] * new_spin.dir[1] * s_jm1.dir[0])
+                * j_jm2[2]
+                * s_jm2.dir[1];
+        }
+
+        // Evaluate energy difference
+        de += de0 + de1 / om + de2 / (om * om);
+
+        // Accept/reject
+        // Accept if <0, or w/ prob e^{-\beta \Delta E} otherwise
+        if de < 0.0 || unif.sample(&mut rng) < (-self.vars.beta * de).exp() {
+            self.spins[index].dir = new_spin.dir;
+        }
+    }
+
     pub fn metropolis_update_magnus(&mut self) {
         let mut rng = rand::thread_rng();
         let unif = Uniform::from(0.0..1.0);
@@ -694,7 +1127,7 @@ impl SpinChain {
             sm[2],
             sp[0],
             sp[1],
-            sp[2] 
+            sp[2]
         )
         .unwrap();
 

@@ -1192,6 +1192,97 @@ fn average(conf: &mut Config) {
     }
 }
 
+fn run_mc_magnus(conf: &mut Config) {
+    let file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("mc_live.dat")
+        .unwrap();
+
+    let m = MultiProgress::new();
+
+    let sty = ProgressStyle::default_bar()
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
+        .progress_chars("#>-");
+    let (tx, rx) = mpsc::channel();
+
+    let points: usize = conf.mc_points as usize;
+    write_in_bg(file, rx);
+
+    // Create storage for the points
+    /*
+    let mut e_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut es_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut mx_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut my_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut mz_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut mxt_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut myt_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut mzt_vec: Vec<f64> = Vec::with_capacity(points);
+    */
+
+    println!("Running Monte-Carlo simulation");
+
+    //What if points <= threads? Then generate 1 point per thread and truncate threads
+
+    let threads = match conf.threads {
+        _ if conf.threads >= points => points,
+        _ => conf.threads,
+    };
+
+    let pool = ThreadPool::new(threads);
+
+    let t_points: u32 = (points / threads) as u32;
+
+    for i in 0..threads {
+        let mut sc: SpinChain = SpinChain::new(conf.clone(), i);
+        let txc = mpsc::Sender::clone(&tx);
+
+        //Make up points in last thread if not divisble
+        let t_points = match i {
+            _ if i == threads - 1 => t_points + (points as u32) - (threads as u32) * t_points,
+            _ => t_points,
+        };
+
+        let pb = m.add(ProgressBar::new(t_points as u64));
+        pb.set_style(sty.clone());
+
+        pool.execute(move || {
+            for _ in 0..t_points as usize {
+                for _ in 0..1e6 as usize {
+                    sc.metropolis_update_mag_full();
+                }
+                let m: [f64; 3] = sc.m();
+                let mt: [f64; 3] = sc.m_tot();
+                let ms: [f64; 3] = [
+                    m[0] / sc.vars.ssize as f64,
+                    m[1] / sc.vars.ssize as f64,
+                    m[2] / sc.vars.ssize as f64,
+                ];
+                let _mst: [f64; 3] = [
+                    mt[0] / sc.vars.hsize as f64,
+                    mt[1] / sc.vars.hsize as f64,
+                    mt[2] / sc.vars.hsize as f64,
+                ];
+                let e: f64 = sc.total_energy2();
+                let es: f64 = sc.mc_system_energy();
+
+                let s: f64 = sc.vars.ssize as f64;
+                let sm: [f64; 3] = sc.spins[(s / 4.0) as usize].dir;
+                let sp: [f64; 3] = sc.spins[(3.0 * s / 4.0) as usize].dir;
+                let formatted_string: String = format!(
+                    "{} {} {} {} {} {} {} {} {} {} {}",
+                    e, es, ms[0], ms[1], ms[2], sm[0], sm[1], sm[2], sp[0], sp[1], sp[2]
+                );
+                txc.send(formatted_string).unwrap();
+                pb.inc(1);
+            }
+            pb.finish_with_message("Done");
+        });
+    }
+    m.join().unwrap();
+}
+
 fn run_mc(conf: &mut Config) {
     let file = OpenOptions::new()
         .create(true)
@@ -1317,6 +1408,11 @@ fn main() {
                 .short("m")
                 .long("monte-carlo")
                 .help("Calculate an average quantitity in Monte-Carlo"),
+        )
+        .arg(
+            Arg::with_name("mc-full")
+                .long("monte-carlo-magnus")
+                .help("Calculate an average quantitity in Monte-Carlo, Magnus expansion to second order in omega^{-1}"),
         )
         .arg(
             Arg::with_name("hist")
@@ -1748,6 +1844,14 @@ fn main() {
         true => {
             default = false;
             run_mc(&mut conf);
+        }
+        false => (),
+    };
+
+    match matches.is_present("mc-full") {
+        true => {
+            default = false;
+            run_mc_magnus(&mut conf);
         }
         false => (),
     };
