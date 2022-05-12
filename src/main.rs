@@ -33,6 +33,41 @@ fn write_in_bg(file: File, rx: std::sync::mpsc::Receiver<String>) {
     });
 }
 
+fn profile_in_bg(
+    file: File,
+    rx: std::sync::mpsc::Receiver<String>,
+    size: usize,
+    pts: usize,
+) -> thread::JoinHandle<()> {
+    thread::spawn(move || {
+        let mut mx_vec_mu: Vec<f64> = vec![0.0; size];
+        let mut my_vec_mu: Vec<f64> = vec![0.0; size];
+        let mut mz_vec_mu: Vec<f64> = vec![0.0; size];
+        // Issues with hanging to join threads: how to fix?
+        //        for received in rx {
+        for _ in 0..(size * pts) {
+            let received = rx.recv().unwrap();
+            let v: Vec<&str> = received.split(' ').collect();
+            //            println!("{:?}",v);
+            let index: usize = v[0].parse::<usize>().unwrap();
+            let sx: f64 = v[1].parse::<f64>().unwrap();
+            let sy: f64 = v[2].parse::<f64>().unwrap();
+            let sz: f64 = v[3].parse::<f64>().unwrap();
+
+            mx_vec_mu[index] += sx;
+            my_vec_mu[index] += sy;
+            mz_vec_mu[index] += sz;
+        }
+        println!("Now writing data");
+        for i in 0..size {
+            let mu_x: f64 = mx_vec_mu[i] / (pts as f64);
+            let mu_y: f64 = my_vec_mu[i] / (pts as f64);
+            let mu_z: f64 = mz_vec_mu[i] / (pts as f64);
+            writeln!(&file, "{} {} {} {}", i, mu_x, mu_y, mu_z).unwrap();
+        }
+    })
+}
+
 fn print_config_description() {
     let c: Config = Config::default();
     println!("# Default config and description of options");
@@ -1283,6 +1318,84 @@ fn run_mc_magnus(conf: &mut Config) {
     m.join().unwrap();
 }
 
+fn run_mc_profile(conf: &mut Config) {
+    // Generate x magnetisation profile
+
+    let file = File::create("mc_sx_profile.dat").unwrap();
+
+    let m = MultiProgress::new();
+
+    let sty = ProgressStyle::default_bar()
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})")
+        .progress_chars("#>-");
+    let (tx, rx) = mpsc::channel();
+
+    let points: usize = conf.mc_points as usize;
+    let writing_thread = profile_in_bg(file, rx, conf.hsize as usize, points);
+
+    // Create storage for the points
+    /*
+    let mut e_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut es_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut mx_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut my_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut mz_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut mxt_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut myt_vec: Vec<f64> = Vec::with_capacity(points);
+    let mut mzt_vec: Vec<f64> = Vec::with_capacity(points);
+    */
+
+    println!("Running Monte-Carlo simulation");
+
+    //What if points <= threads? Then generate 1 point per thread and truncate threads
+
+    let threads = match conf.threads {
+        _ if conf.threads >= points => points,
+        _ => conf.threads,
+    };
+
+    let pool = ThreadPool::new(threads);
+
+    let t_points: u32 = (points / threads) as u32;
+
+    for i in 0..threads {
+        let mut sc: SpinChain = SpinChain::new(conf.clone(), i);
+        let txc = mpsc::Sender::clone(&tx);
+
+        //Make up points in last thread if not divisble
+        let t_points = match i {
+            _ if i == threads - 1 => t_points + (points as u32) - (threads as u32) * t_points,
+            _ => t_points,
+        };
+
+        let pb = m.add(ProgressBar::new(t_points as u64));
+        pb.set_style(sty.clone());
+
+        pool.execute(move || {
+            for _ in 0..t_points as usize {
+                for _ in 0..1e6 as usize {
+                    sc.metropolis_update();
+                }
+                for i in 0..sc.vars.hsize {
+                    let formatted_string: String = format!(
+                        "{} {} {} {}",
+                        i,
+                        sc.spins[i as usize].dir[0],
+                        sc.spins[i as usize].dir[1],
+                        sc.spins[i as usize].dir[2]
+                    );
+                    txc.send(formatted_string).unwrap();
+                }
+                pb.inc(1);
+            }
+            pb.finish_with_message("Done");
+        });
+    }
+    m.join().unwrap();
+    println!("Joined m threads");
+    writing_thread.join().unwrap();
+}
+
 fn run_mc(conf: &mut Config) {
     let file = OpenOptions::new()
         .create(true)
@@ -1408,6 +1521,12 @@ fn main() {
                 .short("m")
                 .long("monte-carlo")
                 .help("Calculate an average quantitity in Monte-Carlo"),
+        )
+        .arg(
+            Arg::with_name("mc-profile")
+                .short("p")
+                .long("monte-carlo-profile")
+                .help("Calculate an average quantitity in Monte-Carlo, spatially resolved"),
         )
         .arg(
             Arg::with_name("mc-full")
@@ -1844,6 +1963,13 @@ fn main() {
         true => {
             default = false;
             run_mc(&mut conf);
+        }
+        false => (),
+    };
+    match matches.is_present("mc-profile") {
+        true => {
+            default = false;
+            run_mc_profile(&mut conf);
         }
         false => (),
     };
