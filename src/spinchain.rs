@@ -57,7 +57,7 @@ pub enum Dir {
 ///Stores spins, couplings, fields, and allows dynamical updates via a Suzuki-Trotter decomposition
 pub struct SpinChain {
     ///Coupling matrices for spins
-    j_couple: Vec<[f64; 3]>,
+    pub j_couple: Vec<[f64; 3]>,
     ///Static field acting on the system
     pub static_h: Vec<[f64; 3]>,
     ///Spins
@@ -68,7 +68,7 @@ pub struct SpinChain {
     ///Configuration variables for the system
     pub vars: Config,
     ///Log file
-    pub file: std::fs::File,
+    pub file: Option<std::fs::File>,
     //    pub spec_name: String,
 }
 
@@ -198,12 +198,8 @@ impl SpinChain {
 
         //Log file
         let file = match conf.log {
-            true => File::create(&conf_file_name).unwrap(),
-            false => File::create("/dev/null").unwrap(),
-        };
-        match conf.log {
-            true => writeln!(&file, "#t E_total E_sub M_x M_y M_z").unwrap(),
-            false => (),
+            true => Some(File::create(&conf_file_name).unwrap()),
+            false => None,
         };
         let t0: f64 = -conf.trel;
 
@@ -1090,14 +1086,21 @@ impl SpinChain {
             let mx_loc = self.spins[j].dir[0];
             let my_loc = self.spins[j].dir[1];
             let mz_loc = self.spins[j].dir[2];
-            writeln!(
-                &self.file,
-                "{} {} {} {} {} {}",
-                self.t, j, e_loc, mx_loc, my_loc, mz_loc,
-            )
-            .unwrap();
+
+            match self.file.as_ref() {
+                Some(mut f) => writeln!(
+                    f,
+                    "{} {} {} {} {} {}",
+                    self.t, j, e_loc, mx_loc, my_loc, mz_loc,
+                )
+                .unwrap(),
+                None => (),
+            };
         }
-        writeln!(&self.file, "").unwrap();
+        match self.file.as_ref() {
+            Some(mut f) => writeln!(f, "").unwrap(),
+            None => (),
+        };
     }
 
     pub fn log(&self) {
@@ -1112,24 +1115,28 @@ impl SpinChain {
         //        let boundary_term: f64 = self.boundary_term();
         let sm: [f64; 3] = self.spins[(s / 4.0) as usize].dir;
         let sp: [f64; 3] = self.spins[(3.0 * s / 4.0) as usize].dir;
-        writeln!(
-            &self.file,
-            "{} {} {} {} {} {} {} {} {} {} {} {} {}",
-            self.t,
-            es,
-            e,
-            m[0] / s,
-            m[1] / s,
-            m[2] / s,
-            mt[2] / self.vars.hsize as f64,
-            sm[0],
-            sm[1],
-            sm[2],
-            sp[0],
-            sp[1],
-            sp[2]
-        )
-        .unwrap();
+
+        match self.file.as_ref() {
+            Some(mut f) => writeln!(
+                f,
+                "{} {} {} {} {} {} {} {} {} {} {} {} {}",
+                self.t,
+                es,
+                e,
+                m[0] / s,
+                m[1] / s,
+                m[2] / s,
+                mt[2] / self.vars.hsize as f64,
+                sm[0],
+                sm[1],
+                sm[2],
+                sp[0],
+                sp[1],
+                sp[2]
+            )
+            .unwrap(),
+            None => (),
+        };
 
         let pi = std::f64::consts::PI;
 

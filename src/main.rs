@@ -40,6 +40,7 @@ fn profile_in_bg(
     pts: usize,
 ) -> thread::JoinHandle<()> {
     thread::spawn(move || {
+        let mut e_vec_mu: Vec<f64> = vec![0.0; size];
         let mut mx_vec_mu: Vec<f64> = vec![0.0; size];
         let mut my_vec_mu: Vec<f64> = vec![0.0; size];
         let mut mz_vec_mu: Vec<f64> = vec![0.0; size];
@@ -50,20 +51,23 @@ fn profile_in_bg(
             let v: Vec<&str> = received.split(' ').collect();
             //            println!("{:?}",v);
             let index: usize = v[0].parse::<usize>().unwrap();
-            let sx: f64 = v[1].parse::<f64>().unwrap();
-            let sy: f64 = v[2].parse::<f64>().unwrap();
-            let sz: f64 = v[3].parse::<f64>().unwrap();
+            let e: f64 = v[1].parse::<f64>().unwrap();
+            let sx: f64 = v[2].parse::<f64>().unwrap();
+            let sy: f64 = v[3].parse::<f64>().unwrap();
+            let sz: f64 = v[4].parse::<f64>().unwrap();
 
+            e_vec_mu[index] += e;
             mx_vec_mu[index] += sx;
             my_vec_mu[index] += sy;
             mz_vec_mu[index] += sz;
         }
         println!("Now writing data");
         for i in 0..size {
+            let mu_e: f64 = e_vec_mu[i] / (pts as f64);
             let mu_x: f64 = mx_vec_mu[i] / (pts as f64);
             let mu_y: f64 = my_vec_mu[i] / (pts as f64);
             let mu_z: f64 = mz_vec_mu[i] / (pts as f64);
-            writeln!(&file, "{} {} {} {}", i, mu_x, mu_y, mu_z).unwrap();
+            writeln!(&file, "{} {} {} {} {}", i, mu_e, mu_x, mu_y, mu_z).unwrap();
         }
     })
 }
@@ -754,7 +758,7 @@ fn gen_hist_dynamics(conf: &mut Config, sample_num: usize) {
         pb.set_style(sty.clone());
 
         let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
-        sc.file = f.try_clone().unwrap();
+        //        sc.file = f.try_clone().unwrap();
 
         pool.execute(move || {
             pb.set_message(&format!("run {i}", i = i));
@@ -1086,6 +1090,188 @@ fn run_sim(conf: &mut Config) {
     println!("Finished {} runs", num);
 }
 
+fn run_dyn_profile(conf: &mut Config) {
+    let m = MultiProgress::new();
+    let sty = ProgressStyle::default_bar()
+        .template(
+            "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] t={pos}/{len} ({eta}) {msg}",
+        )
+        .progress_chars("#>-");
+
+    let threads = conf.threads;
+    let num: usize = conf.runs as usize;
+    let pool = ThreadPool::new(threads);
+    // Set up to run for 4000 cycles
+    // Log for every 500 cycles
+    conf.t = conf.tau * 4000.0;
+
+    //
+
+    let file_500 = File::create("dyn_profile-500-tau.dat").unwrap();
+    let file_1000 = File::create("dyn_profile-1000-tau.dat").unwrap();
+    let file_1500 = File::create("dyn_profile-1500-tau.dat").unwrap();
+    let file_2000 = File::create("dyn_profile-2000-tau.dat").unwrap();
+    let file_2500 = File::create("dyn_profile-2500-tau.dat").unwrap();
+    let file_3000 = File::create("dyn_profile-3000-tau.dat").unwrap();
+    let file_3500 = File::create("dyn_profile-3500-tau.dat").unwrap();
+    let file_4000 = File::create("dyn_profile-4000-tau.dat").unwrap();
+    let (tx_500, rx_500) = mpsc::channel();
+    let (tx_1000, rx_1000) = mpsc::channel();
+    let (tx_1500, rx_1500) = mpsc::channel();
+    let (tx_2000, rx_2000) = mpsc::channel();
+    let (tx_2500, rx_2500) = mpsc::channel();
+    let (tx_3000, rx_3000) = mpsc::channel();
+    let (tx_3500, rx_3500) = mpsc::channel();
+    let (tx_4000, rx_4000) = mpsc::channel();
+    let writing_thread_500 = profile_in_bg(file_500, rx_500, conf.hsize as usize, num);
+    let writing_thread_1000 = profile_in_bg(file_1000, rx_1000, conf.hsize as usize, num);
+    let writing_thread_1500 = profile_in_bg(file_1500, rx_1500, conf.hsize as usize, num);
+    let writing_thread_2000 = profile_in_bg(file_2000, rx_2000, conf.hsize as usize, num);
+    let writing_thread_2500 = profile_in_bg(file_2500, rx_2500, conf.hsize as usize, num);
+    let writing_thread_3000 = profile_in_bg(file_3000, rx_3000, conf.hsize as usize, num);
+    let writing_thread_3500 = profile_in_bg(file_3500, rx_3500, conf.hsize as usize, num);
+    let writing_thread_4000 = profile_in_bg(file_4000, rx_4000, conf.hsize as usize, num);
+
+    println!("Energy density: {}", conf.ednsty);
+    println!("Effective temperature: {}", conf.beta);
+    //    let mut sc_orig: SpinChain = SpinChain::new(conf.clone(), conf.offset as usize).clone();
+
+    for i in 0..num {
+        let mut spin_chain: SpinChain = SpinChain::new(conf.clone(), i + conf.offset as usize);
+        //        let mut spin_chain: SpinChain = sc_orig.clone();
+        //        let txc = mpsc::Sender::clone(&tx);
+        let txc_500 = mpsc::Sender::clone(&tx_500);
+        let txc_1000 = mpsc::Sender::clone(&tx_1000);
+        let txc_1500 = mpsc::Sender::clone(&tx_1500);
+        let txc_2000 = mpsc::Sender::clone(&tx_2000);
+        let txc_2500 = mpsc::Sender::clone(&tx_2500);
+        let txc_3000 = mpsc::Sender::clone(&tx_3000);
+        let txc_3500 = mpsc::Sender::clone(&tx_3500);
+        let txc_4000 = mpsc::Sender::clone(&tx_4000);
+
+        // Initialise at a particular temperature, say T=1
+
+        let pb = m.add(ProgressBar::new(spin_chain.vars.t as u64));
+        pb.set_style(sty.clone());
+
+        pool.execute(move || {
+            pb.set_message(&format!("Run {}", i));
+
+            //            spin_chain.vars.hs=vec![1.0,0.0,-2.0*PI/spin_chain.vars.tau];
+
+            for _ in 0..2e7 as usize {
+                spin_chain.metropolis_update();
+            }
+            pb.reset_eta();
+            let tau_steps: u64 = (spin_chain.vars.tau / spin_chain.vars.dt) as u64;
+
+            while spin_chain.t < spin_chain.vars.t {
+                spin_chain.update();
+                if spin_chain.t.fract() < spin_chain.vars.dt {
+                    pb.set_position(spin_chain.t as u64);
+                }
+
+                let txc_matched = match spin_chain.t {
+                    _ if (spin_chain.t - 500.0 * spin_chain.vars.tau).abs()
+                        < spin_chain.vars.dt / 5.0 =>
+                    {
+                        Some(mpsc::Sender::clone(&txc_500))
+                    }
+                    _ if (spin_chain.t - 1000.0 * spin_chain.vars.tau).abs()
+                        < spin_chain.vars.dt / 5.0 =>
+                    {
+                        Some(mpsc::Sender::clone(&txc_1000))
+                    }
+                    _ if (spin_chain.t - 1500.0 * spin_chain.vars.tau).abs()
+                        < spin_chain.vars.dt / 5.0 =>
+                    {
+                        Some(mpsc::Sender::clone(&txc_1500))
+                    }
+                    _ if (spin_chain.t - 2000.0 * spin_chain.vars.tau).abs()
+                        < spin_chain.vars.dt / 5.0 =>
+                    {
+                        Some(mpsc::Sender::clone(&txc_2000))
+                    }
+                    _ if (spin_chain.t - 2500.0 * spin_chain.vars.tau).abs()
+                        < spin_chain.vars.dt / 5.0 =>
+                    {
+                        Some(mpsc::Sender::clone(&txc_2500))
+                    }
+                    _ if (spin_chain.t - 3000.0 * spin_chain.vars.tau).abs()
+                        < spin_chain.vars.dt / 5.0 =>
+                    {
+                        Some(mpsc::Sender::clone(&txc_3000))
+                    }
+                    _ if (spin_chain.t - 3500.0 * spin_chain.vars.tau).abs()
+                        < spin_chain.vars.dt / 5.0 =>
+                    {
+                        Some(mpsc::Sender::clone(&txc_3500))
+                    }
+                    _ if (spin_chain.t - 4000.0 * spin_chain.vars.tau).abs()
+                        < spin_chain.vars.dt / 5.0 =>
+                    {
+                        Some(mpsc::Sender::clone(&txc_4000))
+                    }
+                    _ => None,
+                };
+
+                if let Some(txc) = txc_matched {
+                    //Now log with correct log
+                    //Write data
+                    let L: usize = spin_chain.vars.hsize as usize;
+                    for i in 0..L {
+                        let s_l: &Spin = match i {
+                            _ if i == 0 => &spin_chain.spins[L - 1],
+                            _ => &spin_chain.spins[i - 1],
+                        };
+                        let s_c: &Spin = &spin_chain.spins[i];
+                        let s_r: &Spin = match i {
+                            _ if i == L - 1 => &spin_chain.spins[0],
+                            _ => &spin_chain.spins[i + 1],
+                        };
+                        let j_l: &[f64; 3] = match i {
+                            _ if i == 0 => &spin_chain.j_couple[L - 1],
+                            _ => &spin_chain.j_couple[i - 1],
+                        };
+
+                        let j_r: &[f64; 3] = &spin_chain.j_couple[i];
+
+                        let mut sjs: f64 = 0.0;
+                        for k in 0..3 {
+                            sjs -= s_l.dir[k] * j_l[k] * s_c.dir[k];
+                            sjs -= s_c.dir[k] * j_r[k] * s_r.dir[k];
+                        }
+                        sjs = sjs / 2.0;
+
+                        let formatted_string: String =
+                            format!("{} {} {} {} {}", i, sjs, s_c.dir[0], s_c.dir[1], s_c.dir[2]);
+                        txc.send(formatted_string).unwrap();
+                    }
+                }
+            }
+
+            pb.finish_and_clear();
+            //            pb.finish_with_message(&format!("Done {}",i));
+        });
+    }
+
+    //    m.join_and_clear().unwrap();
+    m.join().unwrap();
+    writing_thread_500.join().unwrap();
+    writing_thread_1000.join().unwrap();
+    writing_thread_1500.join().unwrap();
+    writing_thread_2000.join().unwrap();
+    writing_thread_2500.join().unwrap();
+    writing_thread_3000.join().unwrap();
+    writing_thread_3500.join().unwrap();
+    writing_thread_4000.join().unwrap();
+
+    //Update config
+    conf.offset += num as u32;
+    fs::write("config.toml", toml::to_string(&conf).unwrap()).unwrap();
+    println!("Finished {} runs", num);
+}
+
 fn run_ext(conf: &mut Config) {
     let m = MultiProgress::new();
     let sty = ProgressStyle::default_bar()
@@ -1321,7 +1507,7 @@ fn run_mc_magnus(conf: &mut Config) {
 fn run_mc_profile(conf: &mut Config) {
     // Generate x magnetisation profile
 
-    let file = File::create("mc_sx_profile.dat").unwrap();
+    let file = File::create("mc_profile.dat").unwrap();
 
     let m = MultiProgress::new();
 
@@ -1376,13 +1562,34 @@ fn run_mc_profile(conf: &mut Config) {
                 for _ in 0..1e6 as usize {
                     sc.metropolis_update();
                 }
-                for i in 0..sc.vars.hsize {
+                for i in 0..sc.vars.hsize as usize {
+                    let L: usize = sc.vars.hsize as usize;
+                    let s_l: &Spin = match i {
+                        _ if i == 0 => &sc.spins[L - 1],
+                        _ => &sc.spins[i - 1],
+                    };
+                    let s_c: &Spin = &sc.spins[i];
+                    let s_r: &Spin = match i {
+                        _ if i == L - 1 => &sc.spins[0],
+                        _ => &sc.spins[i + 1],
+                    };
+                    let j_l: &[f64; 3] = match i {
+                        _ if i == 0 => &sc.j_couple[L - 1],
+                        _ => &sc.j_couple[i - 1],
+                    };
+
+                    let j_r: &[f64; 3] = &sc.j_couple[i];
+
+                    let mut sjs: f64 = 0.0;
+                    for k in 0..3 {
+                        sjs -= s_l.dir[k] * j_l[k] * s_c.dir[k];
+                        sjs -= s_c.dir[k] * j_r[k] * s_r.dir[k];
+                    }
+                    sjs = sjs / 2.0;
+
                     let formatted_string: String = format!(
-                        "{} {} {} {}",
-                        i,
-                        sc.spins[i as usize].dir[0],
-                        sc.spins[i as usize].dir[1],
-                        sc.spins[i as usize].dir[2]
+                        "{} {} {} {} {}",
+                        i, sjs, sc.spins[i].dir[0], sc.spins[i].dir[1], sc.spins[i].dir[2]
                     );
                     txc.send(formatted_string).unwrap();
                 }
@@ -1527,6 +1734,12 @@ fn main() {
                 .short("p")
                 .long("monte-carlo-profile")
                 .help("Calculate an average quantitity in Monte-Carlo, spatially resolved"),
+        )
+        .arg(
+            Arg::with_name("dyn-profile")
+                .short("P")
+                .long("dynamic-profile")
+                .help("Calculate an average quantitity in dynamical runs, spatially resolved"),
         )
         .arg(
             Arg::with_name("mc-full")
@@ -1970,6 +2183,14 @@ fn main() {
         true => {
             default = false;
             run_mc_profile(&mut conf);
+        }
+        false => (),
+    };
+
+    match matches.is_present("dyn-profile") {
+        true => {
+            default = false;
+            run_dyn_profile(&mut conf);
         }
         false => (),
     };
