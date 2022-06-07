@@ -29,7 +29,7 @@ drawn from a separate normal distribution.
 
 ## Usage (output of `sc --help`)
 ```
-spinchain 0.1.26
+spinchain 0.1.3
 Thomas Veness <thomas.veness@nottingham.ac.uk>
 Run classical spin chain simulation
 
@@ -37,20 +37,37 @@ USAGE:
     sc [FLAGS] [OPTIONS]
 
 FLAGS:
-    -a, --avg            Calculate average of runs
-        --config-desc    Print description of config file
-        --help           Prints help information
-    -m, --monte-carlo    Calculate an average quantitity in Monte-Carlo
-    -V, --version        Prints version information
+    -a, --avg                    Calculate average of runs
+        --config-desc            Print description of config file
+    -P, --dynamic-profile        Calculate an average quantitity in dynamical runs, spatially resolved
+    -e                           Produce profile of energy density as a function of t
+        --help                   Prints help information
+    -m, --monte-carlo            Calculate an average quantitity in Monte-Carlo
+        --monte-carlo-magnus     Calculate an average quantitity in Monte-Carlo, Magnus expansion to second order in
+                                 omega^{-1}
+    -p, --monte-carlo-profile    Calculate an average quantitity in Monte-Carlo, spatially resolved
+    -V, --version                Prints version information
 
 OPTIONS:
-    -b, --beta <BETA>             Overrides config beta
-    -h, --histogram <POINTS>      Generate histograms via Monte-Carlo (hist_mc.dat) and via time-evolution
-                                  (hist_dyn.dat) [default: 8000]
-        --magnus-hist <POINTS>    Generate histogram via Monte-Carlo (hist_mc_magnus.dat) for first-order Magnus
-                                  expansion, and print averages [default: 8000]
-        --n-steps <TAUS>          Generate single-shot time-evolution at different drive periods tau
-        --steps <STEPS>           Set step limit when doing n-steps
+    -D, --adiab-full <TAU>              Find adiabatic ensemble H-\omega S^z inhomogeneous
+    -A, --adiabatic <TAU>               Find adiabatic ensemble H-\omega S^z
+    -b, --beta <BETA>                   Overrides config beta
+    -d, --dynamic-histogram <POINTS>    Generate time-evolution histogram (hist_dyn.dat) [default: 1000]
+    -f <E>                              Fit temperature of Monte Carlo ensemble with energy density E
+    -F <E>                              Calculate effective ensemble temperature via conserved quantity arguments
+    -H <E>                              Calculate effective ensemble with initial temp and first-order Magnus
+    -h, --histogram <POINTS>            Generate histograms via Monte-Carlo (hist_mc.dat) and via time-evolution
+                                        (hist_dyn.dat) [default: 8000]
+    -l, --langevin <GAMMA>              Directly simulate Langevin dynamics on the system proper [default: 1.0]
+        --magnus-fit <E>                Fit temperature of Monte-Carlo ensemble with energy density E in lab frame,
+                                        leading Magnus
+        --magnus-hist <POINTS>          Generate histogram via Monte-Carlo (hist_mc_magnus.dat) for first-order Magnus
+                                        expansion, and print averages [default: 8000]
+        --n-steps <TAUS>                Generate single-shot time-evolution at different drive periods tau
+        --rot-frame <E>                 Fit temperature of Monte-Carlo ensemble with energy density E in rotating frame
+    -s, --single-trajectory <POINTS>    Generate time-evolution histogram (hist_sj.dat) [default: 1000]
+        --steps <STEPS>                 Set step limit when doing n-steps
+    -t, --tau <TAU>                     Override tau of config
 ```
 
 
