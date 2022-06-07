@@ -1854,6 +1854,18 @@ impl SpinChain {
 #[cfg(test)]
 mod tests {
     use super::*;
+    macro_rules! assert_almost_eq {
+        ($a:expr, $b:expr, $prec:expr) => {
+            let diff = ($a - $b).abs();
+            if diff > $prec {
+                panic!(format!(
+                    "assertion failed: `abs(left - right) = {:.1e} < {:e}`, \
+                 (left: `{}`, right: `{}`)",
+                    diff, $prec, $a, $b
+                ));
+            }
+        };
+    }
     #[test]
     fn vec_sum() {
         let v1: [f64; 3] = [1.0, 2.0, 3.0];
