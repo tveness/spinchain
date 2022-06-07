@@ -1,12 +1,25 @@
 use std::f64::consts::PI;
 
 ///Struct for storing a 3-dimensional normalised spin
+
 #[derive(Debug, Clone)]
 pub struct Spin {
+    /// [x,y,z] coordinates
     pub dir: [f64; 3],
 }
 
+///
 impl Spin {
+    /// Basic constructor for a Spin
+    ///
+    /// # Examples
+    /// 
+    /// ```
+    /// # use sc::spin::Spin;
+    /// let s: Spin = Spin::new();
+    ///
+    /// assert_eq!(s.dir, [1.0,0.0,0.0]);
+    /// ``` 
     #[allow(dead_code)]
     pub fn new() -> Spin {
         Spin {
@@ -14,13 +27,33 @@ impl Spin {
         }
     }
 
+    /// Constructs a spin from three Cartesian co-ordinates, and ensures normalisation of the spin
+    ///
+    /// # Examples
+    /// ```
+    /// # use sc::spin::Spin;
+    /// let s_1: Spin = Spin::new_xyz(&[1.0,0.0,1.0]);
+    /// let s_2: Spin = Spin::new_xyz(&[2.0,0.0,2.0]);
+    /// assert_eq!(s_1,s_2);
+    /// ```
     #[allow(dead_code)]
     pub fn new_xyz(input: &[f64]) -> Spin {
+        let norm: f64 = input.iter().map(|x| x*x).sum::<f64>().sqrt();
         Spin {
-            dir: [input[0], input[1], input[2]],
+            dir: [input[0]/norm, input[1]/norm, input[2]/norm],
         }
     }
 
+    /// Constructs a spin from three polar angles
+    ///
+    /// # Examples
+    /// ```
+    /// # use sc::spin::Spin;
+    /// # use std::f64::consts::PI;
+    /// let s_xyz: Spin = Spin::new_xyz(&[1.0,0.0,1.0]);
+    /// let s_angles: Spin = Spin::new_from_angles(0.0,PI/4.0);
+    /// assert_eq!(s_xyz,s_angles);
+    /// ```
     #[allow(dead_code)]
     pub fn new_from_angles(theta: f64, phi: f64) -> Spin {
         Spin {
@@ -28,6 +61,27 @@ impl Spin {
         }
     }
 
+    /// Simple Gram-Schmidt process
+    /// Subtracts the `old` component from `perp` and returns a normalised vector in this direction
+    /// # Examples
+    /// ```
+    /// # use sc::spin::Spin;
+    /// let old: [f64; 3] = [1.0,0.0,0.0];
+    /// let perp: [f64; 3] = [1.0, 1.0, 0.0];
+    /// let gs_v: [f64; 3] = Spin::gs(&old, &perp);
+    ///
+    /// assert_eq!(gs_v, [0.0,1.0,0.0]);
+    /// ```
+    ///
+    /// ```
+    /// # use sc::spin::Spin;
+    /// let old: [f64; 3] = [2.0,1.0,3.0];
+    /// let perp: [f64; 3] = [1.0, 1.0, 0.0];
+    /// let gs_v: [f64; 3] = Spin::gs(&old, &perp);
+    ///
+    /// let dot_product: f64 = old.iter().zip(gs_v.iter()).map(|(x,y)| x*y).sum::<f64>();
+    /// assert_eq!(dot_product,0.0);
+    /// ```
     pub fn gs(old: &[f64; 3], perp: &[f64; 3]) -> [f64; 3] {
         let dot: f64 = perp[0] * old[0] + perp[1] * old[1] + perp[2] * old[2];
         let on: f64 = old.iter().map(|x| x * x).sum::<f64>();
@@ -102,6 +156,18 @@ impl Spin {
         self.dir.to_vec()
     }
 
+    /// Rotate spin around direction `field` by an angle determined by norm of `field` times `dt`
+    ///
+    /// # Examples
+    /// ```
+    /// # use sc::spin::Spin;
+    /// # use std::f64::consts::PI;
+    /// let mut s: Spin = Spin::new_xyz(&[1.0,0.0,0.0]);
+    /// let field: [f64;3] = [0.0,1.0,0.0];
+    /// let dt: f64 = PI/2.0;
+    /// s.rotate(&field,dt);
+    /// assert_eq!(s.dir[2], 1.0);
+    /// ```
     pub fn rotate(&mut self, field: &[f64; 3], dt: f64) {
         let fs: f64 = field.iter().map(|x| x * x).sum::<f64>().sqrt();
         let f: [f64; 3] = [field[0] / fs, field[1] / fs, field[2] / fs];

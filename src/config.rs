@@ -5,10 +5,15 @@ use std::env;
 #[allow(non_camel_case_types)]
 /// Types of drive which determine what h_ext does
 pub enum DriveType {
+    /// Circular driving in the x-y plane i.e. (\cos 2\pi t/\tau, \sin 2\pi t/\tau, 0)
     xyplane,
+    /// Elliptic driving in the x-y plane i.e. (e \cos 2\pi t/\tau, \sqrt(1-e^2)\sin 2\pi t/\tau, 0)
     xyelliptic,
+    /// Uniaxial driving along the x-axis ( \cos 2\pi t/\tau, 0, 0)
     uniaxial,
+    /// Constant driving field
     staticfield,
+    /// No field
     none,
 }
 
