@@ -1,7 +1,10 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 
+use self::config::{Config, DriveType};
+use self::spin::Spin;
 use super::*;
+
 use rand::Rng;
 use rand_distr::{Distribution, Normal, Uniform};
 use rustfft::{num_complex::Complex, FftPlanner};

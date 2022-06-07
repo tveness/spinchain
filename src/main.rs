@@ -2,24 +2,19 @@ use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
 use std::fs;
 use std::fs::{File, OpenOptions};
 use std::io::{prelude::*, BufReader};
-use threadpool::ThreadPool;
-mod config;
-use self::config::{Config, DriveType};
 use std::sync::mpsc;
 use std::thread;
+use threadpool::ThreadPool;
 
 mod macros;
 
-mod spin;
-use self::spin::Spin;
 #[allow(unused_imports)]
 use std::f64::consts::PI;
 
-mod spinchain;
-use self::spinchain::SpinChain;
-
-mod spinchain_langevin;
-use self::spinchain_langevin::SpinChainLangevin;
+use sc::config::{Config, DriveType};
+use sc::spin::Spin;
+use sc::spinchain::SpinChain;
+use sc::spinchain_langevin::SpinChainLangevin;
 
 use clap::{crate_version, App, Arg};
 

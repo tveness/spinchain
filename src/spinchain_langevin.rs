@@ -7,6 +7,10 @@
 #![allow(unused_variables)]
 
 use super::*;
+
+use self::config::{Config, DriveType};
+use self::spin::Spin;
+
 use rand::Rng;
 use rand_distr::{Distribution, Normal, Uniform};
 #[allow(unused_imports)]
