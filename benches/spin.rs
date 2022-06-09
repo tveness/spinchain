@@ -31,12 +31,13 @@ impl Spin {
     pub fn set_angles(&mut self, theta: f64, phi: f64) {
         self.dir = [theta.cos() * phi.sin(), theta.sin() * phi.sin(), phi.cos()];
     }
-
+    #[allow(dead_code)]
     /// Returns a vector of coordinates [x,y,z] of the spin
     pub fn xyz(&self) -> Vec<f64> {
         self.dir.to_vec()
     }
 
+    #[allow(dead_code)]
     pub fn rotate(&mut self, field: &[f64; 3], dt: f64) {
         let fs: f64 = field.iter().map(|x| x * x).sum::<f64>().sqrt();
         let f: [f64; 3] = [field[0] / fs, field[1] / fs, field[2] / fs];
@@ -84,6 +85,7 @@ impl IndexMut<usize> for Vec<&Spin> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn spin_xyz_new() {
         let s1: Spin = Spin::new();

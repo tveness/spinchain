@@ -52,9 +52,10 @@ fn rotate(spin: Spin, field: &[f64; 3], dt: f64) -> [f64; 3] {
     sxyz
 }
 
+/*
 fn fibonacci(n: u64) -> u64 {
     (1..n + 1).product()
-}
+}*/
 
 fn spin_bench(c: &mut Criterion) {
     let mut group = c.benchmark_group("Spin rotate");

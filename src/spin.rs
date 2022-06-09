@@ -13,13 +13,13 @@ impl Spin {
     /// Basic constructor for a Spin
     ///
     /// # Examples
-    /// 
+    ///
     /// ```
     /// # use sc::spin::Spin;
     /// let s: Spin = Spin::new();
     ///
     /// assert_eq!(s.dir, [1.0,0.0,0.0]);
-    /// ``` 
+    /// ```
     #[allow(dead_code)]
     pub fn new() -> Spin {
         Spin {
@@ -38,9 +38,9 @@ impl Spin {
     /// ```
     #[allow(dead_code)]
     pub fn new_xyz(input: &[f64]) -> Spin {
-        let norm: f64 = input.iter().map(|x| x*x).sum::<f64>().sqrt();
+        let norm: f64 = input.iter().map(|x| x * x).sum::<f64>().sqrt();
         Spin {
-            dir: [input[0]/norm, input[1]/norm, input[2]/norm],
+            dir: [input[0] / norm, input[1] / norm, input[2] / norm],
         }
     }
 

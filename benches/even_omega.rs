@@ -20,10 +20,12 @@ fn ssh_sum(l: &[f64], r: &[f64], h: &[f64]) -> [f64; 3] {
     [l[0] + r[0] - h[0], l[1] + r[1] - h[1], l[2] + r[2] - h[2]]
 }
 
+/*
 #[inline]
 fn fibonacci(n: u64) -> u64 {
     (1..n + 1).product()
 }
+*/
 
 #[inline]
 fn h_ext(t: f64) -> [f64; 3] {
@@ -74,13 +76,13 @@ fn even_omega_new(
     spins: &[Spin],
     static_h: &[[f64; 3]],
     j_couple: &[[f64; 3]],
-    delta_t: f64,
+    _delta_t: f64,
 ) -> Vec<[f64; 3]> {
     let mut result: Vec<[f64; 3]> = Vec::with_capacity(spins.len() as usize);
     let ssize: usize = 10;
-    let h_ext: [f64; 3] = h_ext(delta_t);
+    //    let h_ext: [f64; 3] = h_ext(delta_t);
     let l: usize = spins.len() as usize / 2;
-    let s: usize = ssize / 2;
+    let _s: usize = ssize / 2;
 
     //n=0 loop explicit
     {
@@ -105,7 +107,7 @@ fn even_omega_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("Even omega");
     group.sample_size(500);
     let j: [f64; 3] = [1.23, 4.56, 7.89];
-    let s: Spin = Spin::new_xyz(&[1.0, 0.0, 0.0]);
+    let _s: Spin = Spin::new_xyz(&[1.0, 0.0, 0.0]);
     let spins: Vec<Spin> = vec![Spin::new(); 100];
     let j_couple: Vec<[f64; 3]> = vec![j.clone(); 200];
     let static_h: Vec<[f64; 3]> = vec![j.clone(); 200];

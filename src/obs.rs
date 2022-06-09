@@ -633,7 +633,7 @@ pub fn gen_hist_dynamics(conf: &mut Config, sample_num: usize) {
 
     let pool = ThreadPool::new(threads);
 
-    let f = File::create("log0.dat").unwrap();
+    //let f = File::create("log0.dat").unwrap();
 
     println!("Sample num: {}", sample_num);
     for i in 0..sample_num {
@@ -1047,7 +1047,7 @@ pub fn run_dyn_profile(conf: &mut Config) {
                 spin_chain.metropolis_update();
             }
             pb.reset_eta();
-            let tau_steps: u64 = (spin_chain.vars.tau / spin_chain.vars.dt) as u64;
+            let _tau_steps: u64 = (spin_chain.vars.tau / spin_chain.vars.dt) as u64;
 
             while spin_chain.t < spin_chain.vars.t {
                 spin_chain.update();
@@ -1102,6 +1102,7 @@ pub fn run_dyn_profile(conf: &mut Config) {
                 if let Some(txc) = txc_matched {
                     //Now log with correct log
                     //Write data
+                    #[allow(non_snake_case)]
                     let L: usize = spin_chain.vars.hsize as usize;
                     for i in 0..L {
                         let s_l: &Spin = match i {
@@ -1447,6 +1448,7 @@ pub fn run_mc_profile(conf: &mut Config) {
                     sc.metropolis_update();
                 }
                 for i in 0..sc.vars.hsize as usize {
+                    #[allow(non_snake_case)]
                     let L: usize = sc.vars.hsize as usize;
                     let s_l: &Spin = match i {
                         _ if i == 0 => &sc.spins[L - 1],

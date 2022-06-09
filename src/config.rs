@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use std::env;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[allow(non_camel_case_types)]
@@ -95,4 +94,4 @@ impl Default for Config {
     }
 }
 
-pub static cs: &str = include_str!("config-desc.toml");
+pub static CS: &str = include_str!("config-desc.toml");
