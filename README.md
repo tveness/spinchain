@@ -29,7 +29,7 @@ drawn from a separate normal distribution.
 
 ## Usage (output of `sc --help`)
 ```
-sc 0.1.31
+sc 0.1.32
 Thomas Veness <thomas.veness@nottingham.ac.uk>
 Run classical spin chain simulation
 
@@ -49,8 +49,8 @@ OPTIONS:
         --config-desc
             Print description of config file
 
-    -d, --dynamic-histogram [<DYNHIST>]
-            Generate time-evolution histogram (hist_dyn.dat)
+    -d, --dynamic-histogram [<POINTS>]
+            Generate time-evolution histogram (hist_dyn.dat) (default POINTS=1000)
 
     -D, --adiab_full <TAU>
             Find adiabatic ensemble H-\\omega S^z inhomogeneous
@@ -58,30 +58,28 @@ OPTIONS:
     -e, --ext
             Produce profile of energy density as a function of t
 
-    -E, --rot-frame <E>
-            Fit temperature of Monte-Carlo ensemble with energy density E in rotating frame
-
     -E, --magnus-fit <E>
             Fit temperature of Monte-Carlo ensemble with energy density E in lab frame, leading
             Magnus
 
-    -f <FIT>
+    -f <E>
             Fit temperature of Monte Carlo ensemble with energy density E
 
-    -F <FIT_EFFECTIVE>
+    -F <E>
             Calculate effective ensemble temperature via conserved quantity arguments
 
-    -h, --histogram [<HIST>]
+    -h, --histogram [<POINTS>]
             Generate histograms via Monte-Carlo (hist_mc.dat) and via time-evolution (hist_dyn.dat)
+            (default POINTS=8000)
 
-    -H, --high-freq <HIGH_FREQ>
+    -H, --high-freq <E>
             Calculate effective ensemble with initial temp and first-order Magnus
 
         --help
             Print help information
 
     -l, --langevin [<GAMMA>]
-            Directly simulate Langevin dynamics on the system proper
+            Directly simulate Langevin dynamics on the system proper (default GAMMA=1.0)
 
     -m, --monte-carlo
             Calculate an average quantitiy in Monte-Carlo
@@ -90,9 +88,9 @@ OPTIONS:
             Calculate an average quantitity in Monte-Carlo, Magnus expansion to second order in
             omega^{-1}
 
-    -m, --magnus-hist [<POINTS>]
+        --magnus-hist [<POINTS>]
             Generate histogram via Monte-Carlo (hist_mc_magnus.dat) for first-order Magnus
-            expansion, and print averages
+            expansion, and print averages (default POINTS=8000)
 
     -n, --n-steps <TAU1,TAU2,...>
             Generate single-shot time-evolution at different drive periods tau
@@ -103,10 +101,13 @@ OPTIONS:
     -P, --dynamic-profile
             Calculate an average quantitity in dynamical runs, spatially resolved
 
-    -s, --trajectory [<SINGLETRAJ>]
-            Generate time-evolution histogram (hist_sj.dat)
+    -r, --rot-frame <E>
+            Fit temperature of Monte-Carlo ensemble with energy density E in rotating frame
 
-    -s, --steps <STEPS>
+    -s, --trajectory [<POINTS>]
+            Generate time-evolution histogram (hist_sj.dat) (default POINTS=1000)
+
+        --steps <STEPS>
             
 
     -t, --tau <TAU>

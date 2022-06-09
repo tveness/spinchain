@@ -657,7 +657,7 @@ dependencies = [
 
 [[package]]
 name = "sc"
-version = "0.1.31"
+version = "0.1.32"
 dependencies = [
  "clap 3.1.18",
  "criterion",

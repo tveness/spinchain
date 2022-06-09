@@ -56,27 +56,21 @@ struct Args {
     ///Calculate an average quantitity in Monte-Carlo, Magnus expansion to second order in omega^{-1}
     #[clap(short, long = "monte-carlo-magnus", parse(from_flag))]
     mc_full: bool,
-    ///Generate histograms via Monte-Carlo (hist_mc.dat) and via time-evolution (hist_dyn.dat)
-    // POINTS
-    #[clap(short = 'h', long = "histogram")]
+    ///Generate histograms via Monte-Carlo (hist_mc.dat) and via time-evolution (hist_dyn.dat) (default POINTS=8000)
+    #[clap(short = 'h', long = "histogram", value_name="POINTS")]
     hist: Option<Option<usize>>,
-    //Default 8000
-    ///Generate time-evolution histogram (hist_dyn.dat)
-    #[clap(short = 'd', long = "dynamic-histogram")]
+    ///Generate time-evolution histogram (hist_dyn.dat) (default POINTS=1000)
+    #[clap(short = 'd', long = "dynamic-histogram", value_name="POINTS")]
     dynhist: Option<Option<usize>>,
-    //Default 1000
-    ///Generate time-evolution histogram (hist_sj.dat)
-    #[clap(short = 's', long = "trajectory")]
+    ///Generate time-evolution histogram (hist_sj.dat) (default POINTS=1000)
+    #[clap(short = 's', long = "trajectory", value_name="POINTS")]
     singletraj: Option<Option<usize>>,
-    //Default 1000
-    ///Directly simulate Langevin dynamics on the system proper
+    ///Directly simulate Langevin dynamics on the system proper (default GAMMA=1.0)
     #[clap(short = 'l', long = "langevin", value_name="GAMMA")]
     langevin: Option<Option<f64>>,
-    //Default 1.0
-    ///Generate histogram via Monte-Carlo (hist_mc_magnus.dat) for first-order Magnus expansion, and print averages
-    #[clap(short, long = "magnus-hist", value_name="POINTS")]
+    ///Generate histogram via Monte-Carlo (hist_mc_magnus.dat) for first-order Magnus expansion, and print averages (default POINTS=8000)
+    #[clap(long = "magnus-hist", value_name="POINTS")]
     magnus_hist: Option<Option<usize>>,
-    //POINTS, default 8000
     ///Print description of config file
     #[clap(long = "config-desc")]
     config_desc: bool,
@@ -94,7 +88,7 @@ struct Args {
     adiab2: Option<f64>,
 
     /// Fit temperature of Monte-Carlo ensemble with energy density E in rotating frame
-    #[clap(long = "rot-frame", short = 'E', value_name="E", allow_hyphen_values=true)]
+    #[clap(long = "rot-frame", short, value_name="E", allow_hyphen_values=true)]
     rot: Option<f64>,
 
     /// Produce profile of energy density as a function of t
@@ -106,19 +100,19 @@ struct Args {
     maglab: Option<f64>, //E
 
     //Set step limit when doing n-steps
-    #[clap(short, long)]
+    #[clap(long)]
     steps: Option<u32>,
 
     ///Fit temperature of Monte Carlo ensemble with energy density E
-    #[clap(short = 'f', allow_hyphen_values=true)]
+    #[clap(short = 'f', allow_hyphen_values=true, value_name="E")]
     fit: Option<f64>, //E
 
     ///Calculate effective ensemble temperature via conserved quantity arguments
-    #[clap(short = 'F', allow_hyphen_values=true)]
+    #[clap(short = 'F', allow_hyphen_values=true, value_name="E")]
     fit_effective: Option<f64>, //E
 
     ///Calculate effective ensemble with initial temp and first-order Magnus
-    #[clap(short = 'H', long, allow_hyphen_values= true)]
+    #[clap(short = 'H', long, allow_hyphen_values= true, value_name="E")]
     high_freq: Option<f64>,
 }
 
