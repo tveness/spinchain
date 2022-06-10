@@ -1756,7 +1756,6 @@ impl SpinChain {
         // \Omega_n = J_{n-1} S_{n-1} + J_n S_{n+1} - B_n
 
         // Calculate field here
-        // NOTE: factor of two may be important?
         let h_ext: [f64; 3] = self.h_ext(self.t + self.vars.dt / 2.0);
 
         let s: usize = self.vars.ssize as usize;
@@ -1771,9 +1770,9 @@ impl SpinChain {
             })
             .collect();
 
-        self.rotate_even(&self.even_omega(&h, self.vars.dt / 2.0), self.vars.dt / 2.0);
-        self.rotate_odd(&self.odd_omega(&h, self.vars.dt / 2.0), self.vars.dt);
-        self.rotate_even(&self.even_omega(&h, self.vars.dt / 2.0), self.vars.dt / 2.0);
+        self.rotate_even(&self.even_omega(&h), self.vars.dt / 2.0);
+        self.rotate_odd(&self.odd_omega(&h), self.vars.dt);
+        self.rotate_even(&self.even_omega(&h), self.vars.dt / 2.0);
 
         self.t += self.vars.dt;
     }
@@ -1803,7 +1802,7 @@ impl SpinChain {
         [l[0] + r[0] - h[0], l[1] + r[1] - h[1], l[2] + r[2] - h[2]]
     }
 
-    fn even_omega(&self, h: &[[f64; 3]], delta_t: f64) -> Vec<[f64; 3]> {
+    fn even_omega(&self, h: &[[f64; 3]]) -> Vec<[f64; 3]> {
         let l: usize = self.spins.len() as usize / 2;
         let mut result: Vec<[f64; 3]> = Vec::with_capacity(l);
         // J_{2n-1} S_{2n-1} + J_{2n} S_{2n+1} - B
@@ -1824,7 +1823,7 @@ impl SpinChain {
 
         result
     }
-    fn odd_omega(&self, h: &[[f64; 3]], delta_t: f64) -> Vec<[f64; 3]> {
+    fn odd_omega(&self, h: &[[f64; 3]]) -> Vec<[f64; 3]> {
         let l: usize = self.spins.len() as usize / 2;
         let mut result: Vec<[f64; 3]> = Vec::with_capacity(l);
         // J_{2n} S_{2n} + J_{2n+1} S_{2n+2}
