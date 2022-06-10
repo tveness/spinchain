@@ -498,7 +498,7 @@ pub fn trajectory_mean_e(conf: &mut Config) -> f64 {
         let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
 
         pool.execute(move || {
-            pb.set_message(&format!("run {i}", i = i));
+            pb.set_message(format!("run {i}"));
             //Initialise chain
             for _ in 0..2e7 as usize {
                 sc.metropolis_update();
@@ -645,7 +645,7 @@ pub fn gen_hist_dynamics(conf: &mut Config, sample_num: usize) {
         //        sc.file = f.try_clone().unwrap();
 
         pool.execute(move || {
-            pb.set_message(&format!("run {i}", i = i));
+            pb.set_message(format!("run {i}"));
             //Do dynamical updates
             pb.reset_eta();
             for _ in 0..steps {
@@ -804,7 +804,7 @@ pub fn run_tau(taus: Vec<f64>, steps: u32, conf: &mut Config) {
         let txc = mpsc::Sender::clone(&tx);
 
         pool.execute(move || {
-            pb.set_message(&format!("tau={tau}", tau = spin_chain.vars.tau));
+            pb.set_message(format!("tau={tau}", tau = spin_chain.vars.tau));
 
             for _ in 0..2e7 as usize {
                 spin_chain.metropolis_update();
@@ -869,7 +869,7 @@ pub fn run_langevin(conf: &mut Config, gamma: f64) {
         pb.set_style(sty.clone());
 
         pool.execute(move || {
-            pb.set_message(&format!("Run {}", i));
+            pb.set_message(format!("Run {}", i));
 
             for _ in 0..2e7 as usize {
                 spin_chain.metropolis_update();
@@ -933,7 +933,7 @@ pub fn run_sim(conf: &mut Config) {
         pb.set_style(sty.clone());
 
         pool.execute(move || {
-            pb.set_message(&format!("Run {}", i));
+            pb.set_message(format!("Run {}", i));
 
             //            spin_chain.vars.hs=vec![1.0,0.0,-2.0*PI/spin_chain.vars.tau];
 
@@ -1039,7 +1039,7 @@ pub fn run_dyn_profile(conf: &mut Config) {
         pb.set_style(sty.clone());
 
         pool.execute(move || {
-            pb.set_message(&format!("Run {}", i));
+            pb.set_message(format!("Run {}", i));
 
             //            spin_chain.vars.hs=vec![1.0,0.0,-2.0*PI/spin_chain.vars.tau];
 
@@ -1181,7 +1181,7 @@ pub fn run_ext(conf: &mut Config) {
         pb.set_style(sty.clone());
 
         pool.execute(move || {
-            pb.set_message(&format!("Run {}", i));
+            pb.set_message(format!("Run {}", i));
 
             //            spin_chain.vars.hs=vec![1.0,0.0,-2.0*PI/spin_chain.vars.tau];
 

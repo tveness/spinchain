@@ -211,7 +211,7 @@ impl SpinChainLangevin {
 
         // Select a spin at random from the chain
         let s: usize = self.vars.hsize as usize;
-        let index: usize = rng.gen_range(0, s) as usize;
+        let index: usize = rng.gen_range(0..s) as usize;
 
         let local_field: [f64; 3] = [0.0, 0.0, 0.0];
 
@@ -277,7 +277,7 @@ impl SpinChainLangevin {
 
         // Select a spin at random from the chain
         let s: usize = self.vars.hsize as usize;
-        let index: usize = rng.gen_range(0, s) as usize;
+        let index: usize = rng.gen_range(0..s) as usize;
 
         let local_field: [f64; 3] = self.static_h[index];
 

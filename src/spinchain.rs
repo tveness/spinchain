@@ -223,7 +223,7 @@ impl SpinChain {
         // Select a spin at random from the chain
         let s: usize = self.vars.hsize as usize;
         let ss: usize = self.vars.ssize as usize;
-        let index: usize = rng.gen_range(0, s) as usize;
+        let index: usize = rng.gen_range(0..s) as usize;
 
         let om: f64 = 2.0 * PI / self.vars.tau;
 
@@ -291,7 +291,7 @@ impl SpinChain {
         // Select a spin at random from the chain
         let s: usize = self.vars.hsize as usize;
         let ss: usize = self.vars.ssize as usize;
-        let index: usize = rng.gen_range(0, s) as usize;
+        let index: usize = rng.gen_range(0..s) as usize;
 
         let om: f64 = 2.0 * PI / self.vars.tau;
 
@@ -442,7 +442,7 @@ impl SpinChain {
         // Select a spin at random from the chain
         let s: usize = self.vars.hsize as usize;
         let ss: usize = self.vars.ssize as usize;
-        let index: usize = rng.gen_range(0, s) as usize;
+        let index: usize = rng.gen_range(0..s) as usize;
 
         //No driving field for MC
         let local_field: [f64; 3] = self.static_h[index];
@@ -511,7 +511,7 @@ impl SpinChain {
 
         // Select a spin at random from the chain
         let s: usize = self.vars.hsize as usize;
-        let index: usize = rng.gen_range(0, s) as usize;
+        let index: usize = rng.gen_range(0..s) as usize;
 
         let om: f64 = 2.0 * PI / self.vars.tau;
 
@@ -942,7 +942,7 @@ impl SpinChain {
 
         // Select a spin at random from the chain
         let s: usize = self.vars.hsize as usize;
-        let index: usize = rng.gen_range(0, s) as usize;
+        let index: usize = rng.gen_range(0..s) as usize;
 
         let local_field: [f64; 3] = self.static_h[index];
 
