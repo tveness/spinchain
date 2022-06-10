@@ -1061,9 +1061,8 @@ impl SpinChain {
                             }));
         }
         // Evaluate energy difference
-
-        // Accept/reject
-        // Accept if <0, or w/ prob e^{-\beta \Delta E} otherwise
+        // Metropolis-Hastings acceptance/rejection:
+        //  Accept if \Delta E < 0, or w/ prob e^{-\beta \Delta E} otherwise
         if de < 0.0 || unif.sample(&mut rng) < (-self.vars.beta * de).exp() {
             self.spins[index].dir = new_spin.dir;
         }
@@ -1757,7 +1756,8 @@ impl SpinChain {
         // \Omega_n = J_{n-1} S_{n-1} + J_n S_{n+1} - B_n
 
         // Calculate field here
-        let h_ext: [f64; 3] = self.h_ext(self.t + self.vars.dt);
+        // NOTE: factor of two may be important?
+        let h_ext: [f64; 3] = self.h_ext(self.t + self.vars.dt / 2.0);
 
         let s: usize = self.vars.ssize as usize;
 
