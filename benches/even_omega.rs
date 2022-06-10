@@ -109,8 +109,9 @@ fn even_omega_benchmark(c: &mut Criterion) {
     let j: [f64; 3] = [1.23, 4.56, 7.89];
     let _s: Spin = Spin::new_xyz(&[1.0, 0.0, 0.0]);
     let spins: Vec<Spin> = vec![Spin::new(); 100];
-    let j_couple: Vec<[f64; 3]> = vec![j.clone(); 200];
-    let static_h: Vec<[f64; 3]> = vec![j.clone(); 200];
+    //Was j.clone() here before, but clone_on_copy
+    let j_couple: Vec<[f64; 3]> = vec![j; 200];
+    let static_h: Vec<[f64; 3]> = vec![j; 200];
     //    c.bench_function("j_s ", |b| b.iter(|| j_s(black_box(&j),black_box(&s))));
     group.bench_function("original", |b| {
         b.iter(|| {

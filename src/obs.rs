@@ -8,11 +8,11 @@ pub fn estim_e(conf: &mut Config, beta: f64) -> f64 {
     let mut e_samples: Vec<f64> = vec![0.0; samples];
     let omega: f64 = 2.0 * PI / conf.tau;
 
-    for i in 0..samples {
+    for e_s in e_samples.iter_mut().take(samples) {
         for _ in 0..1000 {
             sc.metropolis_update();
         }
-        e_samples[i] = sc.mc_system_energy() + omega * sc.m()[2] / sc.vars.ssize as f64;
+        *e_s = sc.mc_system_energy() + omega * sc.m()[2] / sc.vars.ssize as f64;
     }
 
     //    println!("{:?}", e_samples);
@@ -27,11 +27,11 @@ pub fn estim_e_maglab(conf: &mut Config, beta: f64) -> f64 {
     let mut e_samples: Vec<f64> = vec![0.0; samples];
     //let omega: f64 = 2.0 * PI / conf.tau;
 
-    for i in 0..samples {
+    for e_s in e_samples.iter_mut().take(samples) {
         for _ in 0..10000 {
             sc.metropolis_update_maglab();
         }
-        e_samples[i] = sc.mc_system_energy_maglab(); // + omega * sc.m()[2] / sc.vars.ssize as f64;
+        *e_s = sc.mc_system_energy_maglab(); // + omega * sc.m()[2] / sc.vars.ssize as f64;
     }
 
     //    println!("{:?}", e_samples);
@@ -46,11 +46,11 @@ pub fn estim_e_rot(conf: &mut Config, beta: f64) -> f64 {
     let mut e_samples: Vec<f64> = vec![0.0; samples];
     //let omega: f64 = 2.0 * PI / conf.tau;
 
-    for i in 0..samples {
+    for e_s in e_samples.iter_mut().take(samples) {
         for _ in 0..10000 {
             sc.metropolis_update_rot_magnus();
         }
-        e_samples[i] = sc.mc_system_energy_rot(); // + omega * sc.m()[2] / sc.vars.ssize as f64;
+        *e_s = sc.mc_system_energy_rot(); // + omega * sc.m()[2] / sc.vars.ssize as f64;
     }
 
     //    println!("{:?}", e_samples);
@@ -65,12 +65,12 @@ pub fn estim_e2(conf: &mut Config, beta: f64) -> f64 {
     let samples: usize = 1000;
     let mut e_samples: Vec<f64> = vec![0.0; samples];
 
-    for i in 0..samples {
+    for e_s in e_samples.iter_mut().take(samples) {
         for _ in 0..1e3 as usize {
             sc.metropolis_update();
         }
         //        e_samples[i] = sc.mc_total_energy();
-        e_samples[i] = sc.mc_total_energy();
+        *e_s = sc.mc_total_energy();
     }
 
     //    println!("{:?}", e_samples);
@@ -86,12 +86,12 @@ pub fn estim_eh(conf: &mut Config, beta: f64) -> f64 {
     let samples: usize = 1000;
     let mut e_samples: Vec<f64> = vec![0.0; samples];
 
-    for i in 0..samples {
+    for e_s in e_samples.iter_mut().take(samples) {
         for _ in 0..1e3 as usize {
             sc.metropolis_update();
         }
         //        e_samples[i] = sc.mc_total_energy();
-        e_samples[i] = sc.mc_total_energy(); // + omega*sc.m()[2]/ sc.vars.ssize as f64;
+        *e_s = sc.mc_total_energy(); // + omega*sc.m()[2]/ sc.vars.ssize as f64;
     }
 
     //    println!("{:?}", e_samples);
@@ -1126,7 +1126,7 @@ pub fn run_dyn_profile(conf: &mut Config) {
                             sjs -= s_l.dir[k] * j_l[k] * s_c.dir[k];
                             sjs -= s_c.dir[k] * j_r[k] * s_r.dir[k];
                         }
-                        sjs = sjs / 2.0;
+                        sjs /= 2.0;
 
                         let formatted_string: String =
                             format!("{} {} {} {} {}", i, sjs, s_c.dir[0], s_c.dir[1], s_c.dir[2]);
@@ -1471,7 +1471,7 @@ pub fn run_mc_profile(conf: &mut Config) {
                         sjs -= s_l.dir[k] * j_l[k] * s_c.dir[k];
                         sjs -= s_c.dir[k] * j_r[k] * s_r.dir[k];
                     }
-                    sjs = sjs / 2.0;
+                    sjs /= 2.0;
 
                     let formatted_string: String = format!(
                         "{} {} {} {} {}",

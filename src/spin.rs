@@ -194,6 +194,11 @@ impl Spin {
     }
 }
 
+impl Default for Spin {
+    fn default() -> Self {
+        Spin::new()
+    }
+}
 impl PartialEq<Spin> for Spin {
     fn eq(&self, other: &Spin) -> bool {
         if (self.dir[0] - other.dir[0]).abs() < 0.001

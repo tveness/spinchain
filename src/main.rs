@@ -21,10 +21,10 @@ use writers::{profile_in_bg, write_in_bg};
 
 mod obs;
 use obs::{
-    average, find_beta, find_beta2,
-    find_beta_maglab, find_beta_rot, find_betah, gen_hist, gen_hist_dynamics, gen_hist_magnus,
-    gen_single_traj, get_obs, get_obs_maglab, get_obs_rot, get_obsh, run_dyn_profile, run_ext,
-    run_langevin, run_mc, run_mc_magnus, run_mc_profile, run_sim, run_tau, trajectory_mean_e,
+    average, find_beta, find_beta2, find_beta_maglab, find_beta_rot, find_betah, gen_hist,
+    gen_hist_dynamics, gen_hist_magnus, gen_single_traj, get_obs, get_obs_maglab, get_obs_rot,
+    get_obsh, run_dyn_profile, run_ext, run_langevin, run_mc, run_mc_magnus, run_mc_profile,
+    run_sim, run_tau, trajectory_mean_e,
 };
 //use obs::{estim_e, estim_e2, estim_e_maglab, estim_e_rot, estim_eh}
 
@@ -57,38 +57,44 @@ struct Args {
     #[clap(short, long = "monte-carlo-magnus", parse(from_flag))]
     mc_full: bool,
     ///Generate histograms via Monte-Carlo (hist_mc.dat) and via time-evolution (hist_dyn.dat) (default POINTS=8000)
-    #[clap(short = 'h', long = "histogram", value_name="POINTS")]
+    #[clap(short = 'h', long = "histogram", value_name = "POINTS")]
     hist: Option<Option<usize>>,
     ///Generate time-evolution histogram (hist_dyn.dat) (default POINTS=1000)
-    #[clap(short = 'd', long = "dynamic-histogram", value_name="POINTS")]
+    #[clap(short = 'd', long = "dynamic-histogram", value_name = "POINTS")]
     dynhist: Option<Option<usize>>,
     ///Generate time-evolution histogram (hist_sj.dat) (default POINTS=1000)
-    #[clap(short = 's', long = "trajectory", value_name="POINTS")]
+    #[clap(short = 's', long = "trajectory", value_name = "POINTS")]
     singletraj: Option<Option<usize>>,
     ///Directly simulate Langevin dynamics on the system proper (default GAMMA=1.0)
-    #[clap(short = 'l', long = "langevin", value_name="GAMMA")]
+    #[clap(short = 'l', long = "langevin", value_name = "GAMMA")]
     langevin: Option<Option<f64>>,
+
     ///Generate histogram via Monte-Carlo (hist_mc_magnus.dat) for first-order Magnus expansion, and print averages (default POINTS=8000)
-    #[clap(long = "magnus-hist", value_name="POINTS")]
+    #[clap(long = "magnus-hist", value_name = "POINTS")]
     magnus_hist: Option<Option<usize>>,
     ///Print description of config file
     #[clap(long = "config-desc")]
     config_desc: bool,
 
     ///Generate single-shot time-evolution at different drive periods tau
-    #[clap(long = "n-steps", short, value_name="TAU1,TAU2,...")]
+    #[clap(long = "n-steps", short, value_name = "TAU1,TAU2,...")]
     n_steps_taus: Option<Vec<f64>>,
 
     ///Find adiabatic ensemble H-\\omega S^z
-    #[clap(long = "adiabatic", short = 'A', value_name="TAU")]
+    #[clap(long = "adiabatic", short = 'A', value_name = "TAU")]
     adiabatic: Option<f64>,
 
     /// Find adiabatic ensemble H-\\omega S^z inhomogeneous
-    #[clap(long = "adiab_full", short = 'D', value_name="TAU")]
+    #[clap(long = "adiab_full", short = 'D', value_name = "TAU")]
     adiab2: Option<f64>,
 
     /// Fit temperature of Monte-Carlo ensemble with energy density E in rotating frame
-    #[clap(long = "rot-frame", short, value_name="E", allow_hyphen_values=true)]
+    #[clap(
+        long = "rot-frame",
+        short,
+        value_name = "E",
+        allow_hyphen_values = true
+    )]
     rot: Option<f64>,
 
     /// Produce profile of energy density as a function of t
@@ -96,7 +102,7 @@ struct Args {
     ext: bool,
 
     /// Fit temperature of Monte-Carlo ensemble with energy density E in lab frame, leading Magnus
-    #[clap(short = 'E', long = "magnus-fit", value_name="E")]
+    #[clap(short = 'E', long = "magnus-fit", value_name = "E")]
     maglab: Option<f64>, //E
 
     //Set step limit when doing n-steps
@@ -104,15 +110,15 @@ struct Args {
     steps: Option<u32>,
 
     ///Fit temperature of Monte Carlo ensemble with energy density E
-    #[clap(short = 'f', allow_hyphen_values=true, value_name="E")]
+    #[clap(short = 'f', allow_hyphen_values = true, value_name = "E")]
     fit: Option<f64>, //E
 
     ///Calculate effective ensemble temperature via conserved quantity arguments
-    #[clap(short = 'F', allow_hyphen_values=true, value_name="E")]
+    #[clap(short = 'F', allow_hyphen_values = true, value_name = "E")]
     fit_effective: Option<f64>, //E
 
     ///Calculate effective ensemble with initial temp and first-order Magnus
-    #[clap(short = 'H', long, allow_hyphen_values= true, value_name="E")]
+    #[clap(short = 'H', long, allow_hyphen_values = true, value_name = "E")]
     high_freq: Option<f64>,
 }
 
@@ -147,10 +153,7 @@ fn main() {
         default = false;
     }
 
-    let steps = match args.steps {
-        Some(x) => x,
-        None => 1000,
-    };
+    let steps = args.steps.unwrap_or(1000);
 
     if let Some(taus) = args.n_steps_taus {
         //        println!("Overriding to: {}", b);
@@ -375,10 +378,7 @@ fn main() {
     }
 
     if let Some(points) = args.hist {
-        let points = match points {
-            Some(x) => x,
-            None => 8000_usize,
-        };
+        let points = points.unwrap_or(8000_usize);
 
         println!("Running hist");
         default = false;
@@ -386,30 +386,21 @@ fn main() {
     }
 
     if let Some(sample_num) = args.dynhist {
-        let sample_num: usize = match sample_num {
-            Some(x) => x,
-            None => 1000_usize,
-        };
+        let sample_num: usize = sample_num.unwrap_or(1000_usize);
         println!("Running dynamic hist");
         default = false;
         gen_hist_dynamics(&mut conf, sample_num);
     }
 
     if let Some(points) = args.magnus_hist {
-        let points = match points {
-            Some(x) => x,
-            None => 8000_usize,
-        };
+        let points = points.unwrap_or(8000_usize);
         println!("Running Monte-Carlo for first-order Magnus expansion");
         default = false;
         gen_hist_magnus(&mut conf, points);
     }
 
     if let Some(single_samples) = args.singletraj {
-        let single_samples = match single_samples {
-            Some(x) => x,
-            None => 1000_usize,
-        };
+        let single_samples = single_samples.unwrap_or(1000_usize);
         println!("Running single trajectory");
         default = false;
         gen_single_traj(&mut conf, single_samples);
@@ -441,14 +432,10 @@ fn main() {
     }
 
     if let Some(langevin) = args.langevin {
-        let gamma: f64 = match langevin {
-            Some(x) => x,
-            None => 1.0,
-        };
+        let gamma: f64 = langevin.unwrap_or(1.0);
         println!(
             "Running Langevin dynamics on the system proper with
-                gamma={}",
-            gamma
+                gamma={gamma}"
         );
         conf.hsize = conf.ssize;
         run_langevin(&mut conf, gamma);

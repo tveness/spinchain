@@ -199,7 +199,7 @@ impl SpinChainLangevin {
             j_couple,
             static_h,
             t: t0,
-            gamma: gamma,
+            gamma,
             file,
         }
     }
@@ -469,7 +469,8 @@ impl SpinChainLangevin {
             .collect();
         //        println!("h field: {:?} at time t: {}", hfield, self.t);
 
-        for j in 0..l - 1 {
+        //        for j in 0..l - 1 {
+        for (j, _item) in hfield.iter().enumerate().take(l - 1) {
             for k in 0..3 {
                 e -= self.spins[j].dir[k] * self.j_couple[j][k] * self.spins[j + 1].dir[k];
                 e += self.spins[j].dir[k] * hfield[j][k];
@@ -590,7 +591,8 @@ impl SpinChainLangevin {
             .map(|x| Self::sum_vec(&self.static_h[x], &h_e))
             .collect();
 
-        for i in 0..s - 1 {
+        //for i in 0..s - 1 {
+        for (i, _item) in h.iter().enumerate().take(s - 1) {
             for k in 0..3 {
                 e -= self.spins[i].dir[k] * self.j_couple[i][k] * self.spins[i + 1].dir[k];
                 e += self.spins[i].dir[k] * h[i][k];
@@ -747,7 +749,7 @@ impl SpinChainLangevin {
     ///Rotates every even site by the field for a time dt
     fn rotate_even(&mut self, field: &[[f64; 3]], dt: f64) {
         for (i, item) in field.iter().enumerate() {
-            self.spins[2 * i].rotate(&item, dt);
+            self.spins[2 * i].rotate(item, dt);
         }
     }
 
@@ -755,7 +757,7 @@ impl SpinChainLangevin {
     fn rotate_odd(&mut self, field: &[[f64; 3]], dt: f64) {
         let l: usize = self.vars.hsize as usize / 2;
         for (i, item) in field.iter().enumerate() {
-            self.spins[2 * i + 1].rotate(&item, dt);
+            self.spins[2 * i + 1].rotate(item, dt);
         }
     }
 
@@ -866,11 +868,11 @@ mod tests {
         ($a:expr, $b:expr, $prec:expr) => {
             let diff = ($a - $b).abs();
             if diff > $prec {
-                panic!(format!(
+                panic!(
                     "assertion failed: `abs(left - right) = {:.1e} < {:e}`, \
                  (left: `{}`, right: `{}`)",
                     diff, $prec, $a, $b
-                ));
+                );
             }
         };
     }
@@ -900,7 +902,7 @@ mod tests {
 
         let pi: f64 = std::f64::consts::PI;
         //Spin along z axis
-        let s1: Spin = Spin::new_xyz(&vec![0.0, 0.0, 1.0]);
+        let s1: Spin = Spin::new_xyz(&[0.0, 0.0, 1.0]);
 
         //Spin along x axis
         let mut s2: Spin = Spin::new();
