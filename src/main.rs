@@ -435,7 +435,8 @@ fn main() {
         let gamma: f64 = langevin.unwrap_or(1.0);
         println!(
             "Running Langevin dynamics on the system proper with
-                gamma={}", gamma
+                gamma={}",
+            gamma
         );
         conf.hsize = conf.ssize;
         run_langevin(&mut conf, gamma);
