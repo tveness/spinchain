@@ -498,7 +498,7 @@ pub fn trajectory_mean_e(conf: &mut Config) -> f64 {
         let mut sc: SpinChain = SpinChain::new(conf.clone(), 0);
 
         pool.execute(move || {
-            pb.set_message(format!("run {i}"));
+            pb.set_message(format!("run {}", i));
             //Initialise chain
             for _ in 0..2e7 as usize {
                 sc.metropolis_update();
@@ -645,7 +645,7 @@ pub fn gen_hist_dynamics(conf: &mut Config, sample_num: usize) {
         //        sc.file = f.try_clone().unwrap();
 
         pool.execute(move || {
-            pb.set_message(format!("run {i}"));
+            pb.set_message(format!("run {}", i));
             //Do dynamical updates
             pb.reset_eta();
             for _ in 0..steps {
