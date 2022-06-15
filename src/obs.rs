@@ -743,6 +743,10 @@ pub fn gen_hist(conf: &mut Config, sample_num: usize) {
     // values i.e. that we are in the correct microcanonical picture
     let mut l = true;
     while l {
+        for _ in 0..1e4 as usize {
+            sc.metropolis_update();
+        }
+
         let e_obs = sc.total_energy2();
         let mx = sc.m_tot()[0] / sc.vars.hsize as f64;
         let my = sc.m_tot()[1] / sc.vars.hsize as f64;
@@ -751,9 +755,6 @@ pub fn gen_hist(conf: &mut Config, sample_num: usize) {
         let dx = mx.abs();
         let dy = my.abs();
         let dz = mz.abs();
-        for _ in 0..1e4 as usize {
-            sc.metropolis_update();
-        }
         println!("Initial e: {}", e_obs);
         println!("Initial M_x: {}", mx);
         println!("Initial M_y: {}", my);
