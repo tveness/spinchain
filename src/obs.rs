@@ -739,6 +739,28 @@ pub fn gen_hist(conf: &mut Config, sample_num: usize) {
     );
     println!("Generating dynamics histogram");
 
+    // First, make sure that the energy density, and total magnetisations are close to desired
+    // values i.e. that we are in the correct microcanonical picture
+    let mut l = true;
+    while l {
+        let e_obs = sc.total_energy2();
+        let mx = sc.m_tot()[0] / sc.vars.hsize as f64;
+        let my = sc.m_tot()[1] / sc.vars.hsize as f64;
+        let mz = sc.m_tot()[2] / sc.vars.hsize as f64;
+        let de = (e_obs - sc.vars.ednsty).abs();
+        let dx = mx.abs();
+        let dy = my.abs();
+        let dz = mz.abs();
+        for _ in 0..1e4 as usize {
+            sc.metropolis_update();
+        }
+        println!("Initial e: {}", e_obs);
+        println!("Initial M_x: {}", mx);
+        println!("Initial M_y: {}", my);
+        println!("Initial M_z: {}", mz);
+        l = (de > 0.005) || (dx > 0.005) || (dy > 0.005) || (dz > 0.005);
+    }
+
     for i in 0..sample_num {
         //Do dynamical updates
         for _ in 0..1e3 as usize {
