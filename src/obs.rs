@@ -772,12 +772,17 @@ pub fn gen_hist(conf: &mut Config, sample_num: usize) {
         let mx: f64 = sc.m()[0] / sc.vars.ssize as f64;
         let my: f64 = sc.m()[1] / sc.vars.ssize as f64;
         let mz: f64 = sc.m()[2] / sc.vars.ssize as f64;
-        //        let ed: f64 = sc.system_energy();
-        //        Make it comparable to MC
-
         let ed: f64 = sc.system_energy();
+        let s: f64 = sc.vars.ssize as f64;
+        let sm: [f64; 3] = sc.spins[(s / 4.0) as usize].dir;
+        let sp: [f64; 3] = sc.spins[(3.0 * s / 4.0) as usize].dir;
 
-        writeln!(&dyn_hist, "{} {} {} {} {}", i, mx, my, mz, ed).unwrap();
+        writeln!(
+            &dyn_hist,
+            "{} {} {} {} {} {} {} {} {} {} {}",
+            i, mx, my, mz, ed, sm[0], sm[1], sm[2], sp[0], sp[1], sp[2]
+        )
+        .unwrap();
 
         pb.inc(1);
     }

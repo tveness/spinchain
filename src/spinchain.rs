@@ -1802,6 +1802,8 @@ impl SpinChain {
         [l[0] + r[0] - h[0], l[1] + r[1] - h[1], l[2] + r[2] - h[2]]
     }
 
+    /// Calculates Omega for the even sites
+    /// Counting from index 0 is even
     fn even_omega(&self, h: &[[f64; 3]]) -> Vec<[f64; 3]> {
         let l: usize = self.spins.len() as usize / 2;
         let mut result: Vec<[f64; 3]> = Vec::with_capacity(l);
@@ -1827,6 +1829,7 @@ impl SpinChain {
         let l: usize = self.spins.len() as usize / 2;
         let mut result: Vec<[f64; 3]> = Vec::with_capacity(l);
         // J_{2n} S_{2n} + J_{2n+1} S_{2n+2}
+        // Starts from site 1
 
         for n in 0..l - 1 {
             let left_s: [f64; 3] = Self::j_s(&self.j_couple[2 * n], &self.spins[2 * n]);
