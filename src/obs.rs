@@ -755,16 +755,18 @@ pub fn gen_hist(conf: &mut Config, sample_num: usize) {
         let dx = mx.abs();
         let dy = my.abs();
         let dz = mz.abs();
+        let eps = 0.005;
+        let eps_m = 0.001;
         println!("Initial e: {}", e_obs);
         println!("Initial M_x: {}", mx);
         println!("Initial M_y: {}", my);
         println!("Initial M_z: {}", mz);
-        l = (de > 0.005) || (dx > 0.005) || (dy > 0.005) || (dz > 0.005);
+        l = (de > eps) || (dx > eps_m) || (dy > eps_m) || (dz > eps_m);
     }
 
     for i in 0..sample_num {
         //Do dynamical updates
-        for _ in 0..1e3 as usize {
+        for _ in 0..1e4 as usize {
             sc.update();
         }
 
