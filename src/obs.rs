@@ -756,7 +756,7 @@ pub fn gen_hist(conf: &mut Config, sample_num: usize) {
         let dy = my.abs();
         let dz = mz.abs();
         let eps = 0.005;
-        let eps_m = 0.001;
+        let eps_m = 0.003;
         println!("Initial e: {}", e_obs);
         println!("Initial M_x: {}", mx);
         println!("Initial M_y: {}", my);
