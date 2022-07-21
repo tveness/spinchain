@@ -154,9 +154,7 @@ jobs:
         staging="spinchain-${{ needs.create-release.outputs.sc_version }}-${{ matrix.target }}"
         mkdir -p "$staging"/{complete,doc}
 
-        cp {README.md,COPYING,UNLICENSE,LICENSE-MIT} "$staging/"
-        cp {CHANGELOG.md,FAQ.md,GUIDE.md} "$staging/doc/"
-        cp "$outdir"/{sc.bash,sc.fish,_sc.ps1} "$staging/complete/"
+        cp README.md "$staging/"
         cp complete/_sc "$staging/complete/"
 
         if [ "${{ matrix.os }}" = "windows-2019" ]; then
