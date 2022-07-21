@@ -31,7 +31,7 @@ use obs::{
 //use clap::{crate_version, App, Arg};
 use clap::Parser;
 
-/// Run classical spin chain simulation
+/// Creates struct for different options to run to
 #[derive(Parser, Debug)]
 #[clap(author,version,about, long_about=None)]
 struct Args {
