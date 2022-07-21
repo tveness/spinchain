@@ -29,7 +29,7 @@ drawn from a separate normal distribution.
 
 ## Usage (output of `sc --help`)
 ```
-sc 0.1.36-rc5
+sc 0.1.36-rc6
 Thomas Veness <thomas.veness@nottingham.ac.uk>
 Run classical spin chain simulation
 
