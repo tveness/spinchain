@@ -166,34 +166,3 @@ Plots here for beta = 2.89, and B-field = [1.0,0.0,0.0]
 ![M_y density](examples/hist_my.png)
 ![M_z density](examples/hist_mz.png)
 
-
-# To do
-
-* Zwanzig book
-* Consider \Delta E (m \tau, L, \ell)
-* Document current research
-* Vary m: appears to produce a scaling of absorbed energy with m
-* Omega to 0, perturbation theory?
-* Initialise in state with B on system = B(0): how does this effect equilibration?
-* Simulate Langevin dynamics directly
-* Hierarchy of equations from Fokker-Planck?
-* Check high-frequency term of Magnus expansion with numerics?
-* Kawasaki simple derivation of Langevin
-
-# More to do
-
-* Cascades
-* Explain omega-plateau more: extent, reasoning
-* 23rd at 1:30pm
-* Explain "normalised field" more
-* Is Langevin good for omega->0 near to periodic state?
-* M-Z should be best in rotating frame
-* Explain more about Magnus/Magnus-Floquet for classical systems
-* High-frequency stroboscopic histogram
-* PBC vs OBC
-* Ergodicity vs. typicality (Lebowitz talk)
-* Do plts look different for typical couplings i.e. do we need a coupling average?
-* Add system proper to fig 4
-* Slice via m to observe power-law/whatever it is
-
-
