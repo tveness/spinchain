@@ -117,8 +117,8 @@ struct Args {
     #[clap(short = 'F', allow_hyphen_values = true, value_name = "E")]
     fit_effective: Option<f64>, //E
 
-    ///Calculate effective ensemble temperature via conserved quantity arguments
-    #[clap(short = 'r')]
+    ///Calculate response function
+    #[clap(long)]
     response: bool, //E
 
     ///Calculate effective ensemble with initial temp and first-order Magnus
@@ -450,10 +450,9 @@ fn main() {
     match args.response {
         true => {
             run_sim_response(&mut conf);
-        }
-        false => {
             default = false;
         }
+        false => (),
     }
 
     match default {
