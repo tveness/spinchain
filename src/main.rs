@@ -24,7 +24,7 @@ use obs::{
     average, find_beta, find_beta2, find_beta_maglab, find_beta_rot, find_betah, gen_hist,
     gen_hist_dynamics, gen_hist_magnus, gen_single_traj, get_obs, get_obs_maglab, get_obs_rot,
     get_obsh, run_dyn_profile, run_ext, run_langevin, run_mc, run_mc_magnus, run_mc_profile,
-    run_sim, run_tau, trajectory_mean_e,
+    run_sim, run_sim_response, run_tau, trajectory_mean_e,
 };
 //use obs::{estim_e, estim_e2, estim_e_maglab, estim_e_rot, estim_eh}
 
@@ -116,6 +116,10 @@ struct Args {
     ///Calculate effective ensemble temperature via conserved quantity arguments
     #[clap(short = 'F', allow_hyphen_values = true, value_name = "E")]
     fit_effective: Option<f64>, //E
+
+    ///Calculate effective ensemble temperature via conserved quantity arguments
+    #[clap(short = 'r')]
+    response: bool, //E
 
     ///Calculate effective ensemble with initial temp and first-order Magnus
     #[clap(short = 'H', long, allow_hyphen_values = true, value_name = "E")]
@@ -441,6 +445,15 @@ fn main() {
         conf.hsize = conf.ssize;
         run_langevin(&mut conf, gamma);
         default = false;
+    }
+
+    match args.response {
+        true => {
+            run_sim_response(&mut conf);
+        }
+        false => {
+            default = false;
+        }
     }
 
     match default {

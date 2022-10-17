@@ -939,6 +939,75 @@ pub fn run_langevin(conf: &mut Config, gamma: f64) {
     println!("Finished {} runs", num);
 }
 
+pub fn run_sim_response(conf: &mut Config) {
+    let m = MultiProgress::new();
+    let sty = ProgressStyle::default_bar()
+        .template(
+            "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] t={pos}/{len} ({eta}) {msg}",
+        )
+        .progress_chars("#>-");
+
+    let threads = conf.threads;
+    let num: usize = conf.runs as usize;
+    let pool = ThreadPool::new(threads);
+
+    println!("Energy density: {}", conf.ednsty);
+    println!("Effective temperature: {}", conf.beta);
+
+    for i in 0..num {
+        let mut spin_chain: SpinChain = SpinChain::new(conf.clone(), i + conf.offset as usize);
+
+        // Initialise at a particular temperature, say T=1
+
+        let pb = m.add(ProgressBar::new(spin_chain.vars.t as u64));
+        pb.set_style(sty.clone());
+
+        pool.execute(move || {
+            pb.set_message(format!("Run {}", i));
+
+            //            spin_chain.vars.hs=vec![1.0,0.0,-2.0*PI/spin_chain.vars.tau];
+
+            for _ in 0..2e7 as usize {
+                spin_chain.metropolis_update();
+            }
+            pb.reset_eta();
+            let tau_steps: u64 = (spin_chain.vars.tau / spin_chain.vars.dt) as u64;
+
+            spin_chain.log();
+
+            while spin_chain.t < spin_chain.vars.t {
+                if spin_chain.t < 0.0 {
+                    spin_chain.update_no_field();
+                } else {
+                    spin_chain.update();
+                }
+
+                if spin_chain.vars.strob {
+                    if ((spin_chain.t / spin_chain.vars.dt) as u64).rem_euclid(tau_steps) == 0 {
+                        spin_chain.log();
+                    }
+                } else {
+                    spin_chain.log();
+                }
+
+                if spin_chain.t.fract() < spin_chain.vars.dt {
+                    pb.set_position(spin_chain.t as u64);
+                }
+            }
+            pb.finish_and_clear();
+            //            pb.finish_with_message(&format!("Done {}",i));
+        });
+    }
+
+    //    m.join_and_clear().unwrap();
+    m.join().unwrap();
+
+    //Update config
+    conf.offset += num as u32;
+    fs::write("config.toml", toml::to_string(&conf).unwrap()).unwrap();
+    println!("Finished {} runs", num);
+}
+
 pub fn run_sim(conf: &mut Config) {
     let m = MultiProgress::new();
     let sty = ProgressStyle::default_bar()

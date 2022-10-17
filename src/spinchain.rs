@@ -1751,6 +1751,33 @@ impl SpinChain {
     }
 
     ///Update one time-step using Suzuki-Trotter evolution
+    pub fn update_no_field(&mut self) {
+        // Suzuki-Trotter proceeds in three steps:
+        // \Omega_n = J_{n-1} S_{n-1} + J_n S_{n+1} - B_n
+
+        // Calculate field here
+        let h_ext: [f64; 3] = self.h_ext(self.t + self.vars.dt / 2.0);
+
+        let s: usize = self.vars.ssize as usize;
+
+        let h: Vec<[f64; 3]> = self
+            .static_h
+            .iter()
+            .enumerate()
+            .map(|(i, item)| match i {
+                i if i < s => h_ext,
+                _ => [0.0, 0.0, 0.0],
+            })
+            .collect();
+
+        self.rotate_even(&self.even_omega(&h), self.vars.dt / 2.0);
+        self.rotate_odd(&self.odd_omega(&h), self.vars.dt);
+        self.rotate_even(&self.even_omega(&h), self.vars.dt / 2.0);
+
+        self.t += self.vars.dt;
+    }
+
+    ///Update one time-step using Suzuki-Trotter evolution
     pub fn update(&mut self) {
         // Suzuki-Trotter proceeds in three steps:
         // \Omega_n = J_{n-1} S_{n-1} + J_n S_{n+1} - B_n
