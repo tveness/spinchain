@@ -24,7 +24,7 @@ use obs::{
     average, find_beta, find_beta2, find_beta_maglab, find_beta_rot, find_betah, gen_hist,
     gen_hist_dynamics, gen_hist_magnus, gen_single_traj, get_obs, get_obs_maglab, get_obs_rot,
     get_obsh, run_dyn_profile, run_ext, run_langevin, run_mc, run_mc_magnus, run_mc_profile,
-    run_sim, run_sim_response, run_tau, trajectory_mean_e,
+    run_sim, run_sim_response, run_tau, trajectory_mean_e, two_point_average,
 };
 //use obs::{estim_e, estim_e2, estim_e_maglab, estim_e_rot, estim_eh}
 
@@ -119,7 +119,11 @@ struct Args {
 
     ///Calculate response function
     #[clap(long)]
-    response: bool, //E
+    response: bool,
+
+    ///Calculate two-point average over log files for all quantities <x(t) x(0)> and write to two-point.dat
+    #[clap(long = "two-point")]
+    two_point: bool,
 
     ///Calculate effective ensemble with initial temp and first-order Magnus
     #[clap(short = 'H', long, allow_hyphen_values = true, value_name = "E")]
@@ -413,6 +417,10 @@ fn main() {
     if args.avg {
         default = false;
         average(&mut conf);
+    }
+    if args.two_point {
+        default = false;
+        two_point_average(&mut conf);
     }
 
     if args.mc {

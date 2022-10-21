@@ -984,7 +984,8 @@ pub fn run_sim_response(conf: &mut Config) {
                 }
 
                 if spin_chain.vars.strob {
-                    if ((spin_chain.t.abs() / spin_chain.vars.dt) as u64).rem_euclid(tau_steps) == 0 {
+                    if ((spin_chain.t.abs() / spin_chain.vars.dt) as u64).rem_euclid(tau_steps) == 0
+                    {
                         spin_chain.log();
                     }
                 } else {
@@ -1320,6 +1321,116 @@ pub fn run_ext(conf: &mut Config) {
     conf.offset += num as u32;
     fs::write("config.toml", toml::to_string(&conf).unwrap()).unwrap();
     println!("Finished {} runs", num);
+}
+
+pub fn two_point_average(conf: &mut Config) {
+    println!("Calculating two-point-average");
+
+    let mut file_glob = conf.file.clone();
+    file_glob.push_str("*.dat");
+
+    let mut avg_data: Vec<Vec<f64>> = Vec::with_capacity(2000 as usize);
+    let mut avg_nums: Vec<f64> = Vec::with_capacity(2000 as usize);
+
+    let expect_str = format!("Failed to find log files");
+    let entries = glob(&file_glob).expect(&expect_str);
+    let entriesc = glob(&file_glob).expect(&expect_str);
+
+    println!("Performing bare average");
+
+    //Can this be done more elegantly?
+    let pb = ProgressBar::new(entriesc.count() as u64);
+
+    pb.set_style(
+        ProgressStyle::default_bar()
+            .template(
+                "{spinner:.green} [{elapsed_precise}] [{bar:40.cyan/blue}] {pos}/{len} ({eta})",
+            )
+            .progress_chars("#>-"),
+    );
+
+    for entry in entries {
+        match entry {
+            Ok(path) => {
+                //Load data into memory
+                pb.inc(1);
+
+                let mut t_zero_data = vec![];
+                {
+                    let file = File::open(&path).expect("Unable to open file");
+                    //                println!("file: {:?}", path.display());
+
+                    // First get the data at line 0
+                    let reader = BufReader::new(file);
+                    for (_i, line) in reader.lines().skip(1).enumerate() {
+                        let line = line.unwrap();
+                        let line_data: Vec<f64> = line
+                            .split(' ')
+                            .flat_map(str::parse::<f64>)
+                            .collect::<Vec<f64>>();
+                        if line_data[0].abs() < 1e-5 {
+                            t_zero_data = line_data;
+                        }
+                    }
+                }
+
+                let file = File::open(&path).expect("Unable to open file");
+
+                let reader = BufReader::new(file);
+
+                //Run through line-by-line
+                //Skip first line
+                for (i, line) in reader.lines().skip(1).enumerate() {
+                    let line = line.unwrap();
+
+                    // Read line into appropriate vector
+
+                    let mut line_data: Vec<f64> = line
+                        .split(' ')
+                        .flat_map(str::parse::<f64>)
+                        .collect::<Vec<f64>>();
+
+                    // Process line data
+                    line_data = line_data
+                        .iter()
+                        .enumerate()
+                        .map(|(i, &x)| match i {
+                            0 => x,
+                            i => x * t_zero_data[i],
+                        })
+                        .collect();
+
+                    //Check if we have reached this line-number before, add if need be
+                    if i == avg_nums.len() {
+                        avg_nums.push(1.0);
+                        avg_data.push(line_data);
+                    } else {
+                        //Increase count of this line
+                        avg_nums[i] += 1.0;
+                        //Update data in avg_data
+                        avg_data[i] = avg_data[i]
+                            .iter()
+                            .zip(line_data.iter())
+                            .map(|(x, y)| x + y)
+                            .collect::<Vec<f64>>();
+                    }
+                }
+            }
+            Err(e) => println!("Error reading file: {:?}", e),
+        };
+    }
+
+    // Now all calculated, write data to file
+
+    let tp_glob = String::from("two-point.dat");
+    let f = File::create(&tp_glob).unwrap();
+
+    for (i, line) in avg_data.iter().enumerate() {
+        for d in line {
+            write!(&f, "{} ", d / avg_nums[i]).unwrap();
+        }
+        writeln!(&f,).unwrap();
+    }
 }
 
 pub fn average(conf: &mut Config) {
