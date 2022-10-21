@@ -974,6 +974,7 @@ pub fn run_sim_response(conf: &mut Config) {
             let tau_steps: u64 = (spin_chain.vars.tau / spin_chain.vars.dt) as u64;
 
             spin_chain.log();
+            spin_chain.t = -spin_chain.vars.t;
 
             while spin_chain.t < spin_chain.vars.t {
                 if spin_chain.t < 0.0 {
@@ -983,7 +984,7 @@ pub fn run_sim_response(conf: &mut Config) {
                 }
 
                 if spin_chain.vars.strob {
-                    if ((spin_chain.t / spin_chain.vars.dt) as u64).rem_euclid(tau_steps) == 0 {
+                    if ((spin_chain.t.abs() / spin_chain.vars.dt) as u64).rem_euclid(tau_steps) == 0 {
                         spin_chain.log();
                     }
                 } else {
