@@ -978,9 +978,9 @@ pub fn run_sim_response(conf: &mut Config) {
 
             while spin_chain.t < spin_chain.vars.t {
                 if spin_chain.t < 0.0 {
-                    spin_chain.update_no_field();
-                } else {
                     spin_chain.update();
+                } else {
+                    spin_chain.update_no_field();
                 }
 
                 if spin_chain.vars.strob {
