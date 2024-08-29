@@ -11,7 +11,7 @@ on:
     ## - release
 
 env:
-  BIN_NAME: spinchain
+  BIN_NAME: sc
   PROJECT_NAME: spinchain
   REPO_NAME: tveness/spinchain
 
