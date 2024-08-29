@@ -11,9 +11,9 @@ on:
     ## - release
 
 env:
-  BIN_NAME: podbeam
-  PROJECT_NAME: podbeam
-  REPO_NAME: tveness/podbeam
+  BIN_NAME: spinchain
+  PROJECT_NAME: spinchain
+  REPO_NAME: tveness/spinchain
 
 jobs:
   dist:
