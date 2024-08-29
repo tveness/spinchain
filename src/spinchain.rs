@@ -1095,14 +1095,18 @@ impl SpinChain {
             let my_loc = self.spins[j].dir[1];
             let mz_loc = self.spins[j].dir[2];
 
-            if let Some(mut f) = self.file.as_ref() { writeln!(
-                f,
-                "{} {} {} {} {} {}",
-                self.t, j, e_loc, mx_loc, my_loc, mz_loc,
-            )
-            .unwrap() };
+            if let Some(mut f) = self.file.as_ref() {
+                writeln!(
+                    f,
+                    "{} {} {} {} {} {}",
+                    self.t, j, e_loc, mx_loc, my_loc, mz_loc,
+                )
+                .unwrap()
+            };
         }
-        if let Some(mut f) = self.file.as_ref() { writeln!(f).unwrap() };
+        if let Some(mut f) = self.file.as_ref() {
+            writeln!(f).unwrap()
+        };
     }
 
     pub fn log(&self) {
@@ -1118,24 +1122,26 @@ impl SpinChain {
         let sm: [f64; 3] = self.spins[(s / 4.0) as usize].dir;
         let sp: [f64; 3] = self.spins[(3.0 * s / 4.0) as usize].dir;
 
-        if let Some(mut f) = self.file.as_ref() { writeln!(
-            f,
-            "{} {} {} {} {} {} {} {} {} {} {} {} {}",
-            self.t,
-            es,
-            e,
-            m[0] / s,
-            m[1] / s,
-            m[2] / s,
-            mt[2] / self.vars.hsize as f64,
-            sm[0],
-            sm[1],
-            sm[2],
-            sp[0],
-            sp[1],
-            sp[2]
-        )
-        .unwrap() };
+        if let Some(mut f) = self.file.as_ref() {
+            writeln!(
+                f,
+                "{} {} {} {} {} {} {} {} {} {} {} {} {}",
+                self.t,
+                es,
+                e,
+                m[0] / s,
+                m[1] / s,
+                m[2] / s,
+                mt[2] / self.vars.hsize as f64,
+                sm[0],
+                sm[1],
+                sm[2],
+                sp[0],
+                sp[1],
+                sp[2]
+            )
+            .unwrap()
+        };
 
         let pi = std::f64::consts::PI;
 
@@ -1684,11 +1690,9 @@ impl SpinChain {
         let spins = self.spins[..s].iter();
 
         //Now calculate magnetisation for this class of spins
-        let result: [f64; 3] = self.spins[..s]
-            .iter()
-            .fold([0.0, 0.0, 0.0], |acc, x| {
-                [acc[0] + x.dir[0], acc[1] + x.dir[1], acc[2] + x.dir[2]]
-            });
+        let result: [f64; 3] = self.spins[..s].iter().fold([0.0, 0.0, 0.0], |acc, x| {
+            [acc[0] + x.dir[0], acc[1] + x.dir[1], acc[2] + x.dir[2]]
+        });
         result
     }
 
@@ -1698,11 +1702,9 @@ impl SpinChain {
         let spins = self.spins.iter();
 
         //Now calculate magnetisation for this class of spins
-        let result: [f64; 3] = self.spins[..s]
-            .iter()
-            .fold([0.0, 0.0, 0.0], |acc, x| {
-                [acc[0] + x.dir[0], acc[1] + x.dir[1], acc[2] + x.dir[2]]
-            });
+        let result: [f64; 3] = self.spins[..s].iter().fold([0.0, 0.0, 0.0], |acc, x| {
+            [acc[0] + x.dir[0], acc[1] + x.dir[1], acc[2] + x.dir[2]]
+        });
         result
     }
 
