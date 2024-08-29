@@ -22,9 +22,9 @@ Classical spin-chain simulation for project investigating periodic driving of a
 spin chain coupled to a bath.
 
 Numerically simulates the time-evolution of the classical spin-chain given by
-$$
-H = - \sum_j  {\bf S_j} J_j {\bf S_{j+1}} + \sum_j {\bf B_j} \cdot {\bf S_j}
-$$
+
+$ H = - \sum_j  {\bf S_j} J_j {\bf S_{j+1}} + \sum_j {\bf B_j} \cdot {\bf S_j} $
+
 where $J={\rm diag}(1,1,\lambda)$ plus noise on the diagonal drawn from a
 normal distribution, and the local magnetic field is a static field plus noise
 drawn from a separate normal distribution.
