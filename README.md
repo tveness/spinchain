@@ -1,6 +1,6 @@
 # Classical spin chain simulation
 
-Linux binary [available](https://github.com/tveness/spinchain/releases)
+Binaries [available](https://github.com/tveness/spinchain/releases)
 
 [![Build status](https://img.shields.io/github/actions/workflow/status/tveness/spinchain/rust.yml?style=for-the-badge)](https://github.com/tveness/spinchain/actions/workflows/rust.yml)
 [![License](https://img.shields.io/github/license/tveness/spinchain?style=for-the-badge)](https://opensource.org/license/agpl-v3)
