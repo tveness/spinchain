@@ -39,25 +39,25 @@ struct Args {
     #[clap(short = 't', long = "tau")]
     tau: Option<f64>,
     /// Calculate average of runs
-    #[clap(short = 'a', long = "avg", parse(from_flag))]
+    #[clap(short = 'a', long = "avg")]
     avg: bool,
     ///Override config beta
     #[clap(short = 'b', long = "beta")]
     beta: Option<f64>,
     ///Calculate an average quantitiy in Monte-Carlo
-    #[clap(short = 'm', long = "monte-carlo", parse(from_flag))]
+    #[clap(short = 'm', long = "monte-carlo")]
     mc: bool,
     ///Calculate an average quantitiy in Monte-Carlo, spatially resolved
-    #[clap(short = 'p', long = "monte-carlo-profile", parse(from_flag))]
+    #[clap(short = 'p', long = "monte-carlo-profile")]
     mc_profile: bool,
     ///Calculate an average quantitity in dynamical runs, spatially resolved
-    #[clap(short = 'P', long = "dynamic-profile", parse(from_flag))]
+    #[clap(short = 'P', long = "dynamic-profile")]
     dyn_profile: bool,
     ///Calculate an average quantitity in Monte-Carlo, Magnus expansion to second order in omega^{-1}
-    #[clap(long = "monte-carlo-magnus", parse(from_flag))]
+    #[clap(long = "monte-carlo-magnus")]
     mc_full: bool,
     ///Generate histograms via Monte-Carlo (hist_mc.dat) and via time-evolution (hist_dyn.dat) (default POINTS=8000)
-    #[clap(short = 'h', long = "histogram", value_name = "POINTS")]
+    #[clap(long = "histogram", value_name = "POINTS")]
     hist: Option<Option<usize>>,
     ///Generate time-evolution histogram (hist_dyn.dat) (default POINTS=1000)
     #[clap(short = 'd', long = "dynamic-histogram", value_name = "POINTS")]

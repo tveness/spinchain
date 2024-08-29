@@ -8,16 +8,16 @@ edition = "2018"
 
 [dependencies]
 
-toml = "0.5.9"
-serde = { version = "1.0.137", features = ["derive"] }
+toml = "0.8.19"
+serde = { version = "1.0.209", features = ["derive"] }
 rand = "0.8.5"
 rand_distr = "0.4.3"
-itertools = "0.10.3"
+itertools = "0.13.0"
 indicatif = "0.16.2"
 threadpool = "1.8.1"
-clap = { version = "3.1.18", features = ["derive"] }
-glob = "0.3.0"
-rustfft = "6.0.1"
+clap = { version = "4.5.16", features = ["derive"] }
+glob = "0.3.1"
+rustfft = "6.2.0"
 
 #[profile.release]
 #debug = true
