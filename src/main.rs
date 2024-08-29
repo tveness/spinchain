@@ -31,9 +31,9 @@ use obs::{
 //use clap::{crate_version, App, Arg};
 use clap::Parser;
 
-/// Creates struct for different options to run to
+/// Run classical spin chain simulation
 #[derive(Parser, Debug)]
-#[clap(author,version,about, long_about=None)]
+#[command(version, about)]
 struct Args {
     /// Override tau from config
     #[clap(short = 't', long = "tau")]
