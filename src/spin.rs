@@ -8,7 +8,6 @@ pub struct Spin {
     pub dir: [f64; 3],
 }
 
-///
 impl Spin {
     /// Basic constructor for a Spin
     ///

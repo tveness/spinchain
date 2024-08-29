@@ -810,7 +810,7 @@ pub fn run_tau(taus: Vec<f64>, steps: u32, conf: &mut Config) {
     let evt_file = OpenOptions::new()
         .create(true)
         .append(true)
-        .open(&evt_string)
+        .open(evt_string)
         .unwrap();
 
     write_in_bg(evt_file, rx);
@@ -1329,10 +1329,10 @@ pub fn two_point_average(conf: &mut Config) {
     let mut file_glob = conf.file.clone();
     file_glob.push_str("*.dat");
 
-    let mut avg_data: Vec<Vec<f64>> = Vec::with_capacity(2000 as usize);
-    let mut avg_nums: Vec<f64> = Vec::with_capacity(2000 as usize);
+    let mut avg_data: Vec<Vec<f64>> = Vec::with_capacity(2000_usize);
+    let mut avg_nums: Vec<f64> = Vec::with_capacity(2000_usize);
 
-    let expect_str = format!("Failed to find log files");
+    let expect_str = "Failed to find log files".to_string();
     let entries = glob(&file_glob).expect(&expect_str);
     let entriesc = glob(&file_glob).expect(&expect_str);
 
@@ -1362,7 +1362,7 @@ pub fn two_point_average(conf: &mut Config) {
 
                     // First get the data at line 0
                     let reader = BufReader::new(file);
-                    for (_i, line) in reader.lines().skip(1).enumerate() {
+                    for line in reader.lines().skip(1) {
                         let line = line.unwrap();
                         let line_data: Vec<f64> = line
                             .split(' ')
@@ -1523,7 +1523,7 @@ pub fn run_mc_magnus(conf: &mut Config) {
         .progress_chars("#>-");
     let (tx, rx) = mpsc::channel();
 
-    let points: usize = conf.mc_points as usize;
+    let points: usize = conf.mc_points;
     write_in_bg(file, rx);
 
     // Create storage for the points
@@ -1612,7 +1612,7 @@ pub fn run_mc_profile(conf: &mut Config) {
         .progress_chars("#>-");
     let (tx, rx) = mpsc::channel();
 
-    let points: usize = conf.mc_points as usize;
+    let points: usize = conf.mc_points;
     let writing_thread = profile_in_bg(file, rx, conf.hsize as usize, points);
 
     // Create storage for the points
@@ -1714,7 +1714,7 @@ pub fn run_mc(conf: &mut Config) {
         .progress_chars("#>-");
     let (tx, rx) = mpsc::channel();
 
-    let points: usize = conf.mc_points as usize;
+    let points: usize = conf.mc_points;
     write_in_bg(file, rx);
 
     // Create storage for the points

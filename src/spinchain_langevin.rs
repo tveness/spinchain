@@ -189,7 +189,7 @@ impl SpinChainLangevin {
             &[conf.file.clone(), num.to_string(), ".dat".to_string()].join("");
 
         //Log file
-        let file = File::create(&conf_file_name).unwrap();
+        let file = File::create(conf_file_name).unwrap();
         writeln!(&file, "#t E_total E_sub M_x M_y M_z").unwrap();
         let t0: f64 = -conf.trel;
 
@@ -779,7 +779,7 @@ impl SpinChainLangevin {
     }
 
     fn even_omega(&self, h: &[[f64; 3]], delta_t: f64, h_l: &[f64; 3]) -> Vec<[f64; 3]> {
-        let l: usize = self.spins.len() as usize / 2;
+        let l: usize = self.spins.len() / 2;
         let mut result: Vec<[f64; 3]> = Vec::with_capacity(l);
         // J_{2n-1} S_{2n-1} + J_{2n} S_{2n+1} - B
         //Do n=0 explicitly
@@ -815,7 +815,7 @@ impl SpinChainLangevin {
         result
     }
     fn odd_omega(&self, h: &[[f64; 3]], delta_t: f64, h_r: &[f64; 3]) -> Vec<[f64; 3]> {
-        let l: usize = self.spins.len() as usize / 2;
+        let l: usize = self.spins.len() / 2;
         let mut result: Vec<[f64; 3]> = Vec::with_capacity(l);
         // J_{2n} S_{2n} + J_{2n+1} S_{2n+2}
 
@@ -980,7 +980,7 @@ mod tests {
         sc.vars.drive = DriveType::none;
         let num: usize = 1_000_000;
 
-        for i in 0..num as usize {
+        for i in 0..num {
             sc.metropolis_update();
         }
         //Expect energy to be approx -L - B l

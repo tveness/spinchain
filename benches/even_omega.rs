@@ -49,7 +49,7 @@ fn even_omega(
     let mut result: Vec<[f64; 3]> = vec![];
     let ssize: usize = 10;
     let h_ext: [f64; 3] = h_ext(delta_t);
-    let l: usize = spins.len() as usize / 2;
+    let l: usize = spins.len() / 2;
 
     for n in 0..l {
         // J_{2n-1} S_{2n-1} + J_{2n} S_{2n+1} - B
@@ -61,7 +61,7 @@ fn even_omega(
         let right_s: [f64; 3] = j_s(&j_couple[2 * n], &spins[2 * n + 1]);
 
         let h: [f64; 3] = match n {
-            n if 2 * n < ssize as usize => sum_vec(&static_h[2 * n], &h_ext),
+            n if 2 * n < ssize => sum_vec(&static_h[2 * n], &h_ext),
             _ => static_h[2 * n],
         };
 
@@ -78,10 +78,10 @@ fn even_omega_new(
     j_couple: &[[f64; 3]],
     _delta_t: f64,
 ) -> Vec<[f64; 3]> {
-    let mut result: Vec<[f64; 3]> = Vec::with_capacity(spins.len() as usize);
+    let mut result: Vec<[f64; 3]> = Vec::with_capacity(spins.len());
     let ssize: usize = 10;
     //    let h_ext: [f64; 3] = h_ext(delta_t);
-    let l: usize = spins.len() as usize / 2;
+    let l: usize = spins.len() / 2;
     let _s: usize = ssize / 2;
 
     //n=0 loop explicit

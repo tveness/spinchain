@@ -201,7 +201,7 @@ impl SpinChain {
 
         //Log file
         let file = match conf.log {
-            true => Some(File::create(&conf_file_name).unwrap()),
+            true => Some(File::create(conf_file_name).unwrap()),
             false => None,
         };
         let t0: f64 = -conf.trel;
@@ -1095,20 +1095,14 @@ impl SpinChain {
             let my_loc = self.spins[j].dir[1];
             let mz_loc = self.spins[j].dir[2];
 
-            match self.file.as_ref() {
-                Some(mut f) => writeln!(
-                    f,
-                    "{} {} {} {} {} {}",
-                    self.t, j, e_loc, mx_loc, my_loc, mz_loc,
-                )
-                .unwrap(),
-                None => (),
-            };
+            if let Some(mut f) = self.file.as_ref() { writeln!(
+                f,
+                "{} {} {} {} {} {}",
+                self.t, j, e_loc, mx_loc, my_loc, mz_loc,
+            )
+            .unwrap() };
         }
-        match self.file.as_ref() {
-            Some(mut f) => writeln!(f).unwrap(), // Newline
-            None => (),
-        };
+        if let Some(mut f) = self.file.as_ref() { writeln!(f).unwrap() };
     }
 
     pub fn log(&self) {
@@ -1124,27 +1118,24 @@ impl SpinChain {
         let sm: [f64; 3] = self.spins[(s / 4.0) as usize].dir;
         let sp: [f64; 3] = self.spins[(3.0 * s / 4.0) as usize].dir;
 
-        match self.file.as_ref() {
-            Some(mut f) => writeln!(
-                f,
-                "{} {} {} {} {} {} {} {} {} {} {} {} {}",
-                self.t,
-                es,
-                e,
-                m[0] / s,
-                m[1] / s,
-                m[2] / s,
-                mt[2] / self.vars.hsize as f64,
-                sm[0],
-                sm[1],
-                sm[2],
-                sp[0],
-                sp[1],
-                sp[2]
-            )
-            .unwrap(),
-            None => (),
-        };
+        if let Some(mut f) = self.file.as_ref() { writeln!(
+            f,
+            "{} {} {} {} {} {} {} {} {} {} {} {} {}",
+            self.t,
+            es,
+            e,
+            m[0] / s,
+            m[1] / s,
+            m[2] / s,
+            mt[2] / self.vars.hsize as f64,
+            sm[0],
+            sm[1],
+            sm[2],
+            sp[0],
+            sp[1],
+            sp[2]
+        )
+        .unwrap() };
 
         let pi = std::f64::consts::PI;
 
@@ -1693,7 +1684,7 @@ impl SpinChain {
         let spins = self.spins[..s].iter();
 
         //Now calculate magnetisation for this class of spins
-        let result: [f64; 3] = self.spins[..s as usize]
+        let result: [f64; 3] = self.spins[..s]
             .iter()
             .fold([0.0, 0.0, 0.0], |acc, x| {
                 [acc[0] + x.dir[0], acc[1] + x.dir[1], acc[2] + x.dir[2]]
@@ -1707,7 +1698,7 @@ impl SpinChain {
         let spins = self.spins.iter();
 
         //Now calculate magnetisation for this class of spins
-        let result: [f64; 3] = self.spins[..s as usize]
+        let result: [f64; 3] = self.spins[..s]
             .iter()
             .fold([0.0, 0.0, 0.0], |acc, x| {
                 [acc[0] + x.dir[0], acc[1] + x.dir[1], acc[2] + x.dir[2]]
@@ -1832,7 +1823,7 @@ impl SpinChain {
     /// Calculates Omega for the even sites
     /// Counting from index 0 is even
     fn even_omega(&self, h: &[[f64; 3]]) -> Vec<[f64; 3]> {
-        let l: usize = self.spins.len() as usize / 2;
+        let l: usize = self.spins.len() / 2;
         let mut result: Vec<[f64; 3]> = Vec::with_capacity(l);
         // J_{2n-1} S_{2n-1} + J_{2n} S_{2n+1} - B
         //Do n=0 explicitly
@@ -1853,7 +1844,7 @@ impl SpinChain {
         result
     }
     fn odd_omega(&self, h: &[[f64; 3]]) -> Vec<[f64; 3]> {
-        let l: usize = self.spins.len() as usize / 2;
+        let l: usize = self.spins.len() / 2;
         let mut result: Vec<[f64; 3]> = Vec::with_capacity(l);
         // J_{2n} S_{2n} + J_{2n+1} S_{2n+2}
         // Starts from site 1
@@ -2005,7 +1996,7 @@ mod tests {
         sc.vars.drive = DriveType::none;
         let num: usize = 1_000_000;
 
-        for i in 0..num as usize {
+        for i in 0..num {
             sc.metropolis_update();
         }
         //Expect energy to be approx -L - B l
