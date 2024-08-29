@@ -4,7 +4,7 @@ use std::f64::consts::PI;
 
 #[derive(Debug, Clone)]
 pub struct Spin {
-    /// [x,y,z] coordinates
+    /// \[x,y,z\] coordinates
     pub dir: [f64; 3],
 }
 
@@ -150,7 +150,7 @@ impl Spin {
         self.dir = [theta.cos() * phi.sin(), theta.sin() * phi.sin(), phi.cos()];
     }
 
-    /// Returns a vector of coordinates [x,y,z] of the spin
+    /// Returns a vector of coordinates \[x,y,z\] of the spin
     pub fn xyz(&self) -> Vec<f64> {
         self.dir.to_vec()
     }
