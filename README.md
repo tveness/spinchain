@@ -2,7 +2,9 @@
 
 Linux binary [available](https://github.com/tveness/spinchain/releases)
 
-![Build](https://github.com/tveness/spinchain/workflows/build-test/badge.svg)
+[![Build status](https://img.shields.io/github/actions/workflow/status/tveness/spinchain/rust.yml?style=for-the-badge)](https://github.com/tveness/spinchain/actions/workflows/rust.yml)
+[![License](https://img.shields.io/github/license/tveness/spinchain?style=for-the-badge)](https://opensource.org/license/agpl-v3)
+![Release](https://img.shields.io/github/v/tag/tveness/spinchain?label=latest%20release&style=for-the-badge)
 
 ## How to build the rust project
 
