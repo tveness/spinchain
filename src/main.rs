@@ -54,7 +54,7 @@ struct Args {
     #[clap(short = 'P', long = "dynamic-profile", parse(from_flag))]
     dyn_profile: bool,
     ///Calculate an average quantitity in Monte-Carlo, Magnus expansion to second order in omega^{-1}
-    #[clap(short, long = "monte-carlo-magnus", parse(from_flag))]
+    #[clap(long = "monte-carlo-magnus", parse(from_flag))]
     mc_full: bool,
     ///Generate histograms via Monte-Carlo (hist_mc.dat) and via time-evolution (hist_dyn.dat) (default POINTS=8000)
     #[clap(short = 'h', long = "histogram", value_name = "POINTS")]
