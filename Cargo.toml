@@ -31,5 +31,4 @@ name = "even_omega"
 harness = false
 
 [dev-dependencies]
-criterion = "0.3.5"
-
+criterion = "0.5.1"
