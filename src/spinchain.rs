@@ -1798,6 +1798,7 @@ impl SpinChain {
     }
 
     ///Rotates every even site by the field for a time dt
+    #[inline]
     fn rotate_even(&mut self, field: &[[f64; 3]], dt: f64) {
         for (i, item) in field.iter().enumerate() {
             self.spins[2 * i].rotate(item, dt);
@@ -1805,6 +1806,7 @@ impl SpinChain {
     }
 
     ///Rotates every odd site by the field for a time dt
+    #[inline]
     fn rotate_odd(&mut self, field: &[[f64; 3]], dt: f64) {
         let l: usize = self.vars.hsize as usize / 2;
         for (i, item) in field.iter().enumerate() {
