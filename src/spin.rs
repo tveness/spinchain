@@ -146,6 +146,7 @@ impl Spin {
 
     #[allow(dead_code)]
     /// Sets the angles of the spin
+    #[inline]
     pub fn set_angles(&mut self, theta: f64, phi: f64) {
         self.dir = [theta.cos() * phi.sin(), theta.sin() * phi.sin(), phi.cos()];
     }
@@ -167,6 +168,7 @@ impl Spin {
     /// s.rotate(&field,dt);
     /// assert_eq!(s.dir[2], 1.0);
     /// ```
+    #[inline]
     pub fn rotate(&mut self, field: &[f64; 3], dt: f64) {
         let fs: f64 = field.iter().map(|x| x * x).sum::<f64>().sqrt();
         let f: [f64; 3] = [field[0] / fs, field[1] / fs, field[2] / fs];
